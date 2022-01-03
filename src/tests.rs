@@ -78,6 +78,7 @@ fn sanity_garbage_collection_check() {
     }
     stack.dump_all(&heap).unwrap();
 }
+
 #[test]
 fn sanity_garbage_collection_check_stopcopy() {
     let roots = {
@@ -100,7 +101,7 @@ fn sanity_garbage_collection_check_stopcopy() {
     // initializing the stack
     let mut stack = Stack { roots };
     // this is memory allocation
-    let mut heap = MarkCompactHeap {
+    let mut heap = StopAndCopyHeap {
         committed_memory,
         free: 0,
     };

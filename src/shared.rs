@@ -41,19 +41,6 @@ pub trait MemoryManager {
     fn committed_memory_mut(&mut self) -> &mut [Node];
 }
 
-pub struct StopAndCopyHeap {
-    // the `top` of the memory != strip.len()
-    // because we don't want to have to zero them out if we don't need to, and don't want to push / pop the vec
-    // especially when we're compacting
-    pub committed_memory: Vec<Node>,
-    // // when the length of vector len reaches the max
-    // pub max_size: usize,
-    // // the size of the top, where the last piece of recognizable memory is. 1 less than strip.len()
-    // pub top: usize,
-    // pub max: usize,
-    pub free: usize,
-}
-
 pub mod api {
     type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
     use crate::shared::{Node, NodePointer};
