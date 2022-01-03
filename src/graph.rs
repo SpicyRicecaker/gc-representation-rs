@@ -3,26 +3,32 @@ use std::collections::VecDeque;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug)]
-/// we'll have stack pointing to nodes on the heap
+/// we'll have "stack" pointing to nodes on the heap
+/// it's really not necessary but it's useful in representing the layout of the stack
 pub struct Stack {
     pub roots: Vec<Node>,
 }
 
 impl Stack {
+    /// Provides a breadth-first ordered print of all the reachable values on the stack
+    /// keep in mind the stack pooints into the heap
     pub fn dump_all(&self, heap: &Heap) -> Result<()> {
+        // create a new queue. We use queues for breadth-first search, stack for depth-first search
         let mut queue = VecDeque::new();
+        // add roots of stack first obviously
         for root in &self.roots {
             queue.push_back(root);
         }
+        // we pop from front of queue
         while let Some(node) = queue.pop_front() {
-            // exhaust the stack
-                if let Some(value) = node.value {
-                    print!("{} ", value);
-                }
-                for child in &node.children {
-                    queue.push_back(api::get(*child, heap)?);
-                }
-            // push the children
+            // print its value
+            if let Some(value) = node.value {
+                print!("{} ", value);
+            }
+            // then add the rest of its children to the back of the queue
+            for child in &node.children {
+                queue.push_back(api::get(*child, heap)?);
+            }
         }
         Ok(())
     }
