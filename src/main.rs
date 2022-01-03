@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // now remove some children at the second level
     for i in 0..stack.roots[0].children.len() {
-        api::delete_some_children(stack.roots[0].children[i], &mut heap)?;
+        api::delete_some_children(stack.roots[0].children[i],19, &mut heap)?;
     }
 
     // now the live objects are like 20*15*12 + 20*15 + 20

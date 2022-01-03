@@ -45,7 +45,7 @@ pub struct Heap {
     // // the size of the top, where the last piece of recognizable memory is. 1 less than strip.len()
     // pub top: usize,
     // pub max: usize,
-    pub free: usize
+    pub free: usize,
 }
 
 impl Heap {
@@ -142,12 +142,11 @@ impl Heap {
             // actually move the objects
             //   for every marked node
             for marked in marked_nodes {
-                let forwarding_address =
-                    api::forwarding_address(marked, self)?.unwrap();
+                let forwarding_address = api::forwarding_address(marked, self)?.unwrap();
                 // swap node's current position with node's forwarding position
-                self.committed_memory.swap(marked.idx, forwarding_address.idx);
+                self.committed_memory
+                    .swap(marked.idx, forwarding_address.idx);
             }
-
         }
         self.free = free;
         Ok(self.committed_memory.len() - self.free)
@@ -265,13 +264,16 @@ pub mod api {
     ///
     /// this also means that a tree data structure doesn't quite perfectly
     /// represent the memory of a program, since trees only have one parent reference anyway
-    pub fn delete_some_children(parent_node_pointer: NodePointer, heap: &mut Heap) -> Result<()> {
+    pub fn delete_some_children(
+        parent_node_pointer: NodePointer,
+        number_to_remove: usize,
+        heap: &mut Heap,
+    ) -> Result<()> {
         // go to parent
         if let Some(parent) = heap.committed_memory.get_mut(parent_node_pointer.idx) {
             // delete x number of children
             // we can just delete 5 children for now
-            let x = 19;
-            for _ in 0..x {
+            for _ in 0..number_to_remove {
                 parent.children.pop();
             }
         } else {
@@ -300,4 +302,86 @@ pub struct Node {
     pub parent: Option<NodePointer>,
     pub children: Vec<NodePointer>,
     pub value: Option<u32>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn sanity_garbage_collection_check() {
+        let roots = {
+            let mut roots = Vec::new();
+            (0..1).for_each(|i| {
+                let node = Node {
+                    value: Some(i),
+                    ..Default::default()
+                };
+                roots.push(node);
+            });
+            roots
+        };
+        const SIZE: usize = 4;
+        let mut committed_memory = Vec::new();
+        for _ in 0..SIZE {
+            committed_memory.push(Node::default())
+        }
+
+        // initializing the stack
+        let mut stack = Stack { roots };
+        // this is memory allocation
+        let mut heap = Heap {
+            committed_memory,
+            free: 0,
+        };
+
+        // add one child to root
+        let temp = heap.alloc(&mut stack).unwrap();
+        api::set_value(temp, Some(1), &mut heap).unwrap();
+        stack.roots[0].children.push(temp);
+
+        let mut second_node_pointer = None;
+        // add one child to child of root
+        for i in 0..stack.roots[0].children.len() {
+            let temp = heap.alloc(&mut stack).unwrap();
+            second_node_pointer = Some(temp);
+            api::set_value(temp, Some(2), &mut heap).unwrap();
+            api::add_child(stack.roots[0].children[i], temp, &mut heap).unwrap();
+        }
+
+        // add two children to child of child of root
+        for i in 0..stack.roots[0].children.len() {
+            let children = api::children(stack.roots[0].children[i], &heap).unwrap();
+            for child in children {
+                for i in 33..35 {
+                    // iterations+=1;
+                    let temp = heap.alloc(&mut stack).unwrap();
+                    api::set_value(temp, Some(i), &mut heap).unwrap();
+                    api::add_child(child, temp, &mut heap).unwrap();
+                }
+            }
+        }
+        stack.dump_all(&heap).unwrap();
+
+        // should panic
+        // heap.alloc(&mut stack).unwrap();
+
+        // remove 1 child from second
+        api::delete_some_children(second_node_pointer.unwrap(), 1, &mut heap).unwrap();
+
+        println!("clean stuff");
+
+        stack.dump_all(&heap).unwrap();
+        // now add another child
+        for i in 0..stack.roots[0].children.len() {
+            let children = api::children(stack.roots[0].children[i], &heap).unwrap();
+            for child in children {
+                // iterations+=1;
+                let temp = heap.alloc(&mut stack).unwrap();
+                api::set_value(temp, Some(9999), &mut heap).unwrap();
+                api::add_child(child, temp, &mut heap).unwrap();
+            }
+        }
+        stack.dump_all(&heap).unwrap();
+    }
 }
