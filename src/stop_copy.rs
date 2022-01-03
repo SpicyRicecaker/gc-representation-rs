@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::shared::*;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -79,29 +77,27 @@ impl MemoryManager for StopAndCopyHeap {
     // we can just add a new node and return its id
     fn alloc(&mut self, stack: &mut Stack) -> Result<NodePointer> {
         // check if free is going over fromspace + tospace
-        if self.free < self.from_space + self.to_space {
-            let node = Node::default();
-            // set the node id to where the top of the heap is
-            let node_pointer = NodePointer::new(self.free);
-            // add it to the heap
-            self.committed_memory[node_pointer.idx] = node;
-            // bump the free pointer
-            self.free += 1;
-
-            Ok(node_pointer)
-        } else {
+        if self.free >= self.from_space + self.to_space {
             // we need to run gc
-            let freed = self.collect(stack)?;
-            if freed != 0 {
-                self.alloc(stack)
-            } else {
-                Err("gg collection didn't result in any amount of garbage collected".into())
-            }
+            self.collect(stack)?;
         }
+        if self.free >= self.committed_memory.len() {
+            return Err("gg collection didn't result in any amount of garbage collected".into());
+        }
+
+        let node = Node::default();
+        // set the node id to where the top of the heap is
+        let node_pointer = NodePointer::new(self.free);
+        // add it to the heap
+        self.committed_memory[node_pointer.idx] = node;
+        // bump the free pointer
+        self.free += 1;
+
+        Ok(node_pointer)
     }
 
     /// mark-compact algorithm
-    fn collect(&mut self, stack: &mut Stack) -> Result<usize> {
+    fn collect(&mut self, stack: &mut Stack) -> Result<()> {
         // first we swap from space with tospace
         {
             // literally std::mem swap them. They're both locations, neither is size
@@ -153,7 +149,7 @@ impl MemoryManager for StopAndCopyHeap {
         }
 
         // now we know that our freed space is just committed_memory.len() / 2 - self.free
-        Ok(self.committed_memory.len() / 2 - self.free)
+        Ok(())
     }
 
     // we provide a slice from from space to to space!

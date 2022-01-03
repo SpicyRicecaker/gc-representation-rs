@@ -36,7 +36,7 @@ impl Stack {
 
 pub trait MemoryManager {
     fn alloc(&mut self, stack: &mut Stack) -> Result<NodePointer>;
-    fn collect(&mut self, stack: &mut Stack) -> Result<usize>;
+    fn collect(&mut self, stack: &mut Stack) -> Result<()>;
     fn committed_memory(&self) -> &[Node];
     fn committed_memory_mut(&mut self) -> &mut [Node];
 }
