@@ -74,6 +74,7 @@ impl Heap {
 
     /// mark compact
     pub fn collect(&mut self) -> usize {
+        dbg!("exceeded heap size!");
         todo!()
     }
 
@@ -149,6 +150,30 @@ pub mod api {
             .get(node_pointer.idx)
             .ok_or_else(|| "node pointer not found".into())
     }
+    /// deletes some children given a parent node pointer and a mutable reference to heap
+    /// returns a result of nothing
+    ///
+    /// keep in mind that we cannot delete a node directly given a node pointer
+    /// because we don't know exactly how many nodes are pointing to it
+    /// we would have to do a complete traversal of the tree just to delete a node (which defeats the point of having this data structure)
+    /// so instead we only allow deletions from parent
+    ///
+    /// this also means that a tree data structure doesn't quite perfectly
+    /// represent the memory of a program, since trees only have one parent reference anyway
+    pub fn delete_some_children(parent_node_pointer: NodePointer, heap: &mut Heap) -> Result<()> {
+        // go to parent
+        if let Some(parent) = heap.committed_memory.get_mut(parent_node_pointer.idx) {
+            // delete x number of children
+            // we can just delete 5 children for now
+            let x = 19;
+            for _ in 0..x {
+                parent.children.pop();
+            }
+        } else {
+            return Err("(delete) node to delete children from does not exist".into());
+        };
+        Ok(())
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -162,6 +187,8 @@ impl NodePointer {
     }
 }
 
+/// A node represents some kind of object in memory
+/// A node doesn't technically need a parent pointer, it's literally just there for eye candy
 #[derive(Debug, Default)]
 pub struct Node {
     pub parent: Option<NodePointer>,
