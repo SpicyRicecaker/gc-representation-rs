@@ -6,10 +6,12 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 /// This mark-compact algorithm uses the LISP-2 style sliding algorithm
 /// Heap includes the graph data structure, and acts pretty much like an arena
 pub struct StopAndCopyHeap {
-    // should be at the middle of the heap (len() / 2)
+    // should be at the start of the heap
     pub from_space: usize,
-    // should be at the bottom of the heap (0)
+    // should be at the middle of the heap
     pub to_space: usize,
+    // // extent is always len() / 2
+    // pub extent: usize,
     // where we allocate from
     pub free: usize,
     //
@@ -75,16 +77,11 @@ impl MemoryManager for StopAndCopyHeap {
     fn collect(&mut self, stack: &mut Stack) -> Result<usize> {
         // first we swap from space with tospace
         {
-            // if our from space is currently at the middle of the heap,
-            // bring it back down to the bottom
-            if self.from_space == self.to_space {
-                self.from_space = 0;
-            // if our from space is currently at the bottom of the heap, bring it up
-            } else {
-                self.from_space = self.to_space;
-            }
+            // literally std::mem swap them. They're both locations, neither is size
+            std::mem::swap(&mut self.to_space, &mut self.from_space);
+            // set our free pointer to the new space
+            self.free = self.to_space;
         }
-        // 
 
         todo!()
     }
