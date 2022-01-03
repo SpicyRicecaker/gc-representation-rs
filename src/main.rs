@@ -14,8 +14,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let roots = {
         let mut roots = Vec::new();
-        (0..5).for_each(|_| {
-            roots.push(Node::default());
+        (0..5).for_each(|i| {
+            let node = Node {
+                value: Some(i),
+                ..Default::default()
+            };
+            roots.push(node);
         });
         roots
     };
@@ -45,6 +49,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for _ in 0..2 {
         // allocate
         let temp = heap.alloc()?;
+        // 1 to represent first layer
+        api::set_value(temp, Some(1), &mut heap)?;
         // add the node to the children
         first.children.push(temp);
     }
@@ -52,6 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for child in &first.children {
         for _ in 0..2 {
             let temp = heap.alloc()?;
+            api::set_value(temp, Some(2), &mut heap)?;
             api::add_child(*child, temp, &mut heap)?;
         }
     }
@@ -60,10 +67,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // DON'T KNOW IF THIS MATTERS BUT CLONE OUCH
         let children = api::children(*child, &heap)?;
         for child in children {
-            let temp = heap.alloc()?;
-            api::add_child(child, temp, &mut heap)?;
+            for _ in 0..2 {
+                let temp = heap.alloc()?;
+                api::set_value(temp, Some(3), &mut heap)?;
+                api::add_child(child, temp, &mut heap)?;
+            }
         }
     }
+
+    stack.dump_all(&heap)?;
 
     // top-level roots, every thing else on stack
     //              a    1       // stack

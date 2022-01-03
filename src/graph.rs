@@ -1,9 +1,31 @@
+use std::collections::VecDeque;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug)]
 /// we'll have stack pointing to nodes on the heap
 pub struct Stack {
     pub roots: Vec<Node>,
+}
+
+impl Stack {
+    pub fn dump_all(&self, heap: &Heap) -> Result<()> {
+        let mut queue = VecDeque::new();
+        for root in &self.roots {
+            queue.push_back(root);
+        }
+        while let Some(node) = queue.pop_front() {
+            // exhaust the stack
+                if let Some(value) = node.value {
+                    print!("{} ", value);
+                }
+                for child in &node.children {
+                    queue.push_back(api::get(*child, heap)?);
+                }
+            // push the children
+        }
+        Ok(())
+    }
 }
 
 /// Heap includes the graph data structure, and acts pretty much like an arena
@@ -46,14 +68,26 @@ impl Heap {
     }
 
     /// mark compact
-    fn collect(&mut self) -> usize {
+    pub fn collect(&mut self) -> usize {
         todo!()
+    }
+
+    // breadth-first traversal of node, printing out
+    pub fn dump(&self, node: NodePointer) {
+        if let Some(n) = self.strip.get(node.idx) {
+            if let Some(value) = n.value {
+                print!("{} ", value);
+            }
+            for child in &n.children {
+                self.dump(*child);
+            }
+        }
     }
 }
 
 pub mod api {
     type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-    use super::{Heap, NodePointer};
+    use super::{Heap, Node, NodePointer};
 
     pub fn add_child(
         parent_node_pointer: NodePointer,
@@ -74,10 +108,7 @@ pub mod api {
         }
     }
 
-    pub fn children(
-        parent_node_pointer: NodePointer,
-        heap: &Heap,
-    ) -> Result<Vec<NodePointer>> {
+    pub fn children(parent_node_pointer: NodePointer, heap: &Heap) -> Result<Vec<NodePointer>> {
         if let Some(parent) = heap.strip.get(parent_node_pointer.idx) {
             Ok(parent.children.clone())
         } else {
@@ -97,8 +128,21 @@ pub mod api {
         if let Some(node) = heap.strip.get(node_pointer.idx) {
             Ok(node.value)
         } else {
-            Err("children not found".into())
+            Err("node not found when trying to get value".into())
         }
+    }
+    pub fn set_value(node_pointer: NodePointer, value: Option<u32>, heap: &mut Heap) -> Result<()> {
+        if let Some(node) = heap.strip.get_mut(node_pointer.idx) {
+            node.value = value;
+            Ok(())
+        } else {
+            Err("node not found when trying to set value".into())
+        }
+    }
+    pub fn get(node_pointer: NodePointer, heap: &Heap) -> Result<&Node> {
+        heap.strip
+            .get(node_pointer.idx)
+            .ok_or_else(|| "node pointer not found".into())
     }
 }
 
