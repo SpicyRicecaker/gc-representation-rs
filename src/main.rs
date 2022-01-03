@@ -1,4 +1,5 @@
-use gc_representation_rs::graph::*;
+use gc_representation_rs::mark_compact::MarkCompactHeap;
+use gc_representation_rs::shared::*;
 
 use std::fs;
 use std::time;
@@ -30,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // initializing the stack
     let mut stack = Stack { roots };
     // this is memory allocation
-    let mut heap = Heap {
+    let mut heap = MarkCompactHeap {
         committed_memory,
         free: 0
         // // the max size of the heap, like when you pass a -XMX [size] flag into java vm
@@ -72,7 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..stack.roots[0].children.len() {
         iterations_2 += 1;
         for _ in 0..20 {
-            iterations+=1;
+            iterations += 1;
             let temp = heap.alloc(&mut stack)?;
             api::set_value(temp, Some(2), &mut heap)?;
             api::add_child(stack.roots[0].children[i], temp, &mut heap)?;
@@ -97,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // now remove some children at the second level
     for i in 0..stack.roots[0].children.len() {
-        api::delete_some_children(stack.roots[0].children[i],19, &mut heap)?;
+        api::delete_some_children(stack.roots[0].children[i], 19, &mut heap)?;
     }
 
     // now the live objects are like 20*15*12 + 20*15 + 20
