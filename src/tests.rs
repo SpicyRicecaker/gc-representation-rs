@@ -3,7 +3,7 @@ use crate::shared::*;
 use crate::stop_copy::*;
 
 #[test]
-fn sanity_garbage_collection_check() {
+fn sanity_garbage_collection_check_mark_and_copy() {
     let roots = {
         let mut roots = Vec::new();
         (0..1).for_each(|i| {
@@ -80,7 +80,9 @@ fn sanity_garbage_collection_check() {
 }
 
 #[test]
-fn sanity_garbage_collection_check_stopcopy() {
+fn sanity_garbage_collection_check_stop_and_copy() {
+    const SIZE: usize = 8;
+
     let roots = {
         let mut roots = Vec::new();
         (0..1).for_each(|i| {
@@ -92,7 +94,6 @@ fn sanity_garbage_collection_check_stopcopy() {
         });
         roots
     };
-    const SIZE: usize = 4;
 
     // initializing the stack
     let mut stack = Stack { roots };
@@ -148,3 +149,8 @@ fn sanity_garbage_collection_check_stopcopy() {
     }
     stack.dump_all(&heap).unwrap();
 }
+
+// #[test]
+// fn insane_stop_and_copy() {
+
+// }

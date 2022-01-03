@@ -115,7 +115,7 @@ pub mod api {
         if let Some(node) = heap.committed_memory().get(node_pointer.idx) {
             Ok(node.forwarding_address)
         } else {
-            Err("node not found when trying to get value".into())
+            Err("node not found when trying to get forwarding address".into())
         }
     }
     pub fn set_forwarding_address<T: MemoryManager>(
@@ -134,13 +134,13 @@ pub mod api {
     pub fn get<T: MemoryManager>(node_pointer: NodePointer, heap: &T) -> Result<&Node> {
         heap.committed_memory()
             .get(node_pointer.idx)
-            .ok_or_else(|| "node pointer not found".into())
+            .ok_or_else(|| "node not found when trying to get it immutably from heap".into())
     }
 
     pub fn get_mut<T: MemoryManager>(node_pointer: NodePointer, heap: &mut T) -> Result<&mut Node> {
         heap.committed_memory_mut()
             .get_mut(node_pointer.idx)
-            .ok_or_else(|| "node pointer not found".into())
+            .ok_or_else(|| "node not found when trying to get it mutably from heap".into())
     }
     /// deletes some children given a parent node pointer and a mutable reference to heap
     /// returns a result of nothing
