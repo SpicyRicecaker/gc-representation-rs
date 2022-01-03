@@ -5,7 +5,6 @@ use std::time;
 
 // we're implementing mark-compact first
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let strip = Vec::new();
     let roots = {
         let mut roots = Vec::new();
         (0..5).for_each(|i| {
@@ -17,17 +16,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
         roots
     };
+
+    // create a fixed memory heap that's "zerod" with empty nodes
+    // also the max size of the heap, like when you pass a -XMX [size] flag into java vm
+    // or the total amount of physical memory on a system
+    const SIZE: usize = 5220;
+
+    let mut committed_memory = Vec::new();
+    for _ in 0..SIZE {
+        committed_memory.push(Node::default())
+    }
+
     // initializing the stack
     let mut stack = Stack { roots };
     // this is memory allocation
     let mut heap = Heap {
-        committed_memory: strip,
-        // the max size of the heap, like when you pass a -XMX [size] flag into java vm
-        // or the total amount of physical memory on a system
-        max_size: 5220,
+        committed_memory,
+        free: 0
+        // // the max size of the heap, like when you pass a -XMX [size] flag into java vm
+        // // or the total amount of physical memory on a system
+        // max_size: 5220,
         // top: 0,
         // max: UNITS - 1,
     };
+    dbg!("hello");
     let start = time::Instant::now();
     // push some nodes onto the stack
     // stack.roots[0]
@@ -53,6 +65,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // add the node to the children
         stack.roots[0].children.push(temp);
     }
+    dbg!("added children to root");
 
     // for each child, add 20 more children
     let mut iterations_2 = 0;
@@ -90,7 +103,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // now the live objects are like 20*15*12 + 20*15 + 20
     // which is less than 5220 objects, but the heap is still technically full
     println!("we're still running");
-    // let temp = heap.alloc()?;
+    let temp = heap.alloc(&mut stack)?;
+    println!("yay garbage collection works");
 
     stack.dump_all(&heap)?;
     fs::write(

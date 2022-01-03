@@ -1,7 +1,5 @@
 use std::collections::VecDeque;
 
-use crate::graph::api::forwarding_address;
-
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug)]
@@ -42,26 +40,28 @@ pub struct Heap {
     // because we don't want to have to zero them out if we don't need to, and don't want to push / pop the vec
     // especially when we're compacting
     pub committed_memory: Vec<Node>,
-    // when the length of vector len reaches the max
-    pub max_size: usize,
+    // // when the length of vector len reaches the max
+    // pub max_size: usize,
     // // the size of the top, where the last piece of recognizable memory is. 1 less than strip.len()
     // pub top: usize,
     // pub max: usize,
+    pub free: usize
 }
 
 impl Heap {
     // allocates a new node
     // we can just add a new node and return its id
     pub fn alloc(&mut self, stack: &mut Stack) -> Result<NodePointer> {
-        // if we can fit
-        if self.committed_memory.len() < self.max_size {
+        // if our free pointer is over the committed memory length
+        if self.free < self.committed_memory.len() {
             let node = Node::default();
             // set the node id to where the top of the heap is
-            let node_pointer = self.committed_memory.len();
-            let node_pointer = NodePointer::new(node_pointer);
+            let node_pointer = NodePointer::new(self.free);
             // add it to the heap
-            // the node_pointer is technically also bumped after we push to it
-            self.committed_memory.push(node);
+            self.committed_memory[node_pointer.idx] = node;
+            // bump the free pointer
+            self.free += 1;
+
             Ok(node_pointer)
         } else {
             // we need to run gc
@@ -149,8 +149,8 @@ impl Heap {
             }
 
         }
-        // println!("{}", )
-        todo!()
+        self.free = free;
+        Ok(self.committed_memory.len() - self.free)
     }
 
     // breadth-first traversal of node, printing out
