@@ -109,21 +109,51 @@ impl MemoryManager for StopAndCopyHeap {
             // set our free pointer to the new space
             self.free = self.to_space;
         }
+        // the scan also starts from the beginning of the to_space
+        let mut scan = self.free;
 
-        // copy the roots over
-        // add the roots to worklist
+        // next we populate the initial "working list" with roots
+        {
+            // copy the roots over
+            // this technically adds them to the worklist
+            for root in &mut stack.roots {
+                for child in &mut root.children {
+                    // make sure to update the root refs to point in the right place
+                    *child = self.copy(*child)?;
+                }
+            }
+        }
 
-        // for each node in worklist
-        //
-        //
-        //    copy the references over,
+        // now we process all the references of the nodes in the worklist as well
+        {
+            // you might be wondering...
+            // how do we do `for each node in worklist`?
+            //
+            // well, so long as the scan does not catch up to free
+            // that is, so as long as we have not processed every single "copied" oject on the heap, keep on going
+            while scan < self.free {
+                let scan_node_pointer = NodePointer::new(scan);
+                // get all references, or children of the object that was recently copied to tospace
+                //
+                //
+                //  ... to copy the references over,
+                for i in 0..api::get(scan_node_pointer, self)?.children.len() {
+                    // set the reference to whatever the forwarding address stored inside the reference is, or copy it
+                    //
+                    // TL;DR the reference should now be pointing to copied objects in the tospace no matter what
+                    //
+                    // I don't know how I fked the api up this bad to make this function look like this jargon but yea it happens
+                    api::get_mut(api::get(scan_node_pointer, self)?.children[i], self)?
+                        .forwarding_address = Some(api::get(scan_node_pointer, self)?.children[i]);
+                    // the references get added to the worklist automatically
+                }
+                // don't forget to bump the scan pointer
+                scan += 1;
+            }
+        }
 
-        // and add the references to the worklist
-
-        // move the roots over
-        {}
-
-        todo!()
+        // now we know that our freed space is just committed_memory.len() / 2 - self.free
+        Ok(self.committed_memory.len() / 2 - self.free)
     }
 
     // we provide a slice from from space to to space!
