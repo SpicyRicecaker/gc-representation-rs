@@ -73,6 +73,19 @@ impl MemoryManager for StopAndCopyHeap {
 
     /// mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<usize> {
+        // first we swap from space with tospace
+        {
+            // if our from space is currently at the middle of the heap,
+            // bring it back down to the bottom
+            if self.from_space == self.to_space {
+                self.from_space = 0;
+            // if our from space is currently at the bottom of the heap, bring it up
+            } else {
+                self.from_space = self.to_space;
+            }
+        }
+        // 
+
         todo!()
     }
 
