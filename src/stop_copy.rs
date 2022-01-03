@@ -49,7 +49,26 @@ impl MemoryManager for StopAndCopyHeap {
     // allocates a new node
     // we can just add a new node and return its id
     fn alloc(&mut self, stack: &mut Stack) -> Result<NodePointer> {
-        todo!()
+        // check if free is going over fromspace + tospace
+        if self.free < self.from_space + self.to_space {
+            let node = Node::default();
+            // set the node id to where the top of the heap is
+            let node_pointer = NodePointer::new(self.free);
+            // add it to the heap
+            self.committed_memory[node_pointer.idx] = node;
+            // bump the free pointer
+            self.free += 1;
+
+            Ok(node_pointer)
+        } else {
+            // we need to run gc
+            let freed = self.collect(stack)?;
+            if freed != 0 {
+                self.alloc(stack)
+            } else {
+                Err("gg collection didn't result in any amount of garbage collected".into())
+            }
+        }
     }
 
     /// mark-compact algorithm
