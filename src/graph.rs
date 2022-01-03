@@ -102,6 +102,7 @@ impl Heap {
         }
         // now all our objects should be marked
 
+        let mut free = 0;
         // # compact next
         {
             // first step is to calculate new locations of all objects
@@ -109,7 +110,6 @@ impl Heap {
             // we iterate over all objects in the heap
             //
             // free starts at 0
-            let mut free = 0;
             // if it is marked,
             for marked in &marked_nodes {
                 // set its forwarding address equal to free
@@ -139,12 +139,17 @@ impl Heap {
         }
 
         {
+            // actually move the objects
+            //   for every marked node
+            for marked in marked_nodes {
+                let forwarding_address =
+                    api::forwarding_address(marked, self)?.unwrap();
+                // swap node's current position with node's forwarding position
+                self.committed_memory.swap(marked.idx, forwarding_address.idx);
+            }
 
         }
-        // actually move the objects
-        //   for every marked node
-        //      swap node with node's forwarding position
-        //
+        // println!("{}", )
         todo!()
     }
 
