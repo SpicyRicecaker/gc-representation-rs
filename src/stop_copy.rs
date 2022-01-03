@@ -45,6 +45,33 @@ impl StopAndCopyHeap {
             }
         }
     }
+
+    /// copy function
+    pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
+        // if object has a forwarding address, it means that we've already moved it over to to space, so we can just give it its reference
+        if let Some(forwarding_address) = api::forwarding_address(node_pointer, self)? {
+            Ok(forwarding_address)
+        } else {
+            let new_node_pointer = NodePointer::new(self.free);
+            // otherwise, the new nodepointer value of this object will be whatever free there is
+            // now use .swap() to move nodepointer current location to its new location free
+            self.committed_memory
+                .swap(node_pointer.idx, new_node_pointer.idx);
+
+            // and remember to set the forwarding address of the moved nodepointer to none
+            api::set_forwarding_address(new_node_pointer, None, self)?;
+
+            // now update the old forwarding address to include itself
+            // keep in mind that this object in to space is complete garbage except for the forwarding address part
+            api::set_forwarding_address(node_pointer, Some(new_node_pointer), self)?;
+
+            // also remember to bump free
+            self.free += 1;
+
+            // finally we can return the new_node_pointer
+            Ok(new_node_pointer)
+        }
+    }
 }
 
 impl MemoryManager for StopAndCopyHeap {
@@ -82,6 +109,19 @@ impl MemoryManager for StopAndCopyHeap {
             // set our free pointer to the new space
             self.free = self.to_space;
         }
+
+        // copy the roots over
+        // add the roots to worklist
+
+        // for each node in worklist
+        //
+        //
+        //    copy the references over,
+
+        // and add the references to the worklist
+
+        // move the roots over
+        {}
 
         todo!()
     }
