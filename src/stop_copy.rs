@@ -49,7 +49,7 @@ impl StopAndCopyHeap {
     /// copy function
     pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
         // if object has a forwarding address, it means that we've already moved it over to to space, so we can just give it its reference
-        dbg!(node_pointer, stapi::value(node_pointer, self)?);
+        // dbg!(node_pointer, stapi::value(node_pointer, self)?);
         if let Some(forwarding_address) = stapi::forwarding_address(node_pointer, self)? {
             Ok(forwarding_address)
         } else {
@@ -104,10 +104,10 @@ impl MemoryManager for StopAndCopyHeap {
         // first we swap from space with tospace
         {
             // literally std::mem swap them. They're both locations, neither is size
-            println!("{:?}", self.committed_memory);
-            println!("to space before swap {} {}", self.to_space, self.from_space);
+            // println!("{:?}", self.committed_memory);
+            // println!("to space before swap {} {}", self.to_space, self.from_space);
             std::mem::swap(&mut self.to_space, &mut self.from_space);
-            println!("to space after swap {} {}", self.to_space, self.from_space);
+            // println!("to space after swap {} {}", self.to_space, self.from_space);
             // set our free pointer to the new space
             self.free = self.to_space;
         }
@@ -115,17 +115,17 @@ impl MemoryManager for StopAndCopyHeap {
         let mut scan = self.free;
 
         // dbg!(&self.committed_memory);
-        stack.dump_all(self)?;
-        println!("SUCESSSCUESUCEUSCUESUCSEUCESUCSEUC");
+        // stack.dump_all(self)?;
+        // println!("SUCESSSCUESUCEUSCUESUCSEUCESUCSEUC");
         // next we populate the initial "working list" with roots
         {
             // copy the roots over
             // this technically adds them to the worklist
             for root in &mut stack.roots {
                 for child in &mut root.children {
-                    println!("12312312312");
-                    dbg!(*child);
-                    dbg!("value of child", stapi::value(*child, self)?);
+                    // println!("12312312312");
+                    // dbg!(*child);
+                    // dbg!("value of child", stapi::value(*child, self)?);
                     // make sure to update the root refs to point in the right place
                     // *child = self.copy(*child)?;
                 }

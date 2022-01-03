@@ -55,7 +55,7 @@ fn sanity_garbage_collection_check_mark_and_copy() {
             }
         }
     }
-    stack.dump_all(&heap).unwrap();
+    // stack.dump_all(&heap).unwrap();
 
     // should panic
     // heap.alloc(&mut stack).unwrap();
@@ -63,9 +63,9 @@ fn sanity_garbage_collection_check_mark_and_copy() {
     // remove 1 child from second
     api::delete_some_children(second_node_pointer.unwrap(), 1, &mut heap).unwrap();
 
-    println!("clean stuff");
+    // println!("clean stuff");
 
-    stack.dump_all(&heap).unwrap();
+    // stack.dump_all(&heap).unwrap();
     // now add another child
     for i in 0..stack.roots[0].children.len() {
         let children = api::children(stack.roots[0].children[i], &heap).unwrap();
@@ -76,7 +76,7 @@ fn sanity_garbage_collection_check_mark_and_copy() {
             api::add_child(child, temp, &mut heap).unwrap();
         }
     }
-    stack.dump_all(&heap).unwrap();
+    // stack.dump_all(&heap).unwrap();
 }
 
 #[test]
@@ -126,7 +126,7 @@ fn sanity_garbage_collection_check_stop_and_copy() {
             }
         }
     }
-    stack.dump_all(&heap).unwrap();
+    // stack.dump_all(&heap).unwrap();
 
     // should panic
     // heap.alloc(&mut stack).unwrap();
@@ -134,9 +134,9 @@ fn sanity_garbage_collection_check_stop_and_copy() {
     // remove 1 child from second
     api::delete_some_children(second_node_pointer.unwrap(), 1, &mut heap).unwrap();
 
-    println!("clean stuff");
+    // println!("clean stuff");
 
-    stack.dump_all(&heap).unwrap();
+    // stack.dump_all(&heap).unwrap();
     // now add another child
     for i in 0..stack.roots[0].children.len() {
         let children = api::children(stack.roots[0].children[i], &heap).unwrap();
@@ -147,7 +147,7 @@ fn sanity_garbage_collection_check_stop_and_copy() {
             api::add_child(child, temp, &mut heap).unwrap();
         }
     }
-    stack.dump_all(&heap).unwrap();
+    // stack.dump_all(&heap).unwrap();
 }
 
 // #[test]

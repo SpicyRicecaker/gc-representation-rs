@@ -58,7 +58,7 @@ impl MemoryManager for MarkCompactHeap {
 
     /// mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<()> {
-        dbg!("exceeded heap size!");
+        // dbg!("exceeded heap size!");
         // # mark first
         // create marking bitmap
         // which isn't actually going to be a bitmap but rather a stack of node indices

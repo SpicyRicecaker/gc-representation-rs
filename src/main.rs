@@ -40,7 +40,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // top: 0,
         // max: UNITS - 1,
     };
-    dbg!("hello");
+    // dbg!("hello");
     let start = time::Instant::now();
     // push some nodes onto the stack
     // stack.roots[0]
@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // add the node to the children
         stack.roots[0].children.push(temp);
     }
-    dbg!("added children to root");
+    // dbg!("added children to root");
 
     // for each child, add 20 more children
     let mut iterations_2 = 0;
@@ -79,7 +79,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             api::add_child(stack.roots[0].children[i], temp, &mut heap)?;
         }
     }
-    dbg!(iterations_2);
+    // dbg!(iterations_2);
     // for each child of child, add 20 more children
     for i in 0..stack.roots[0].children.len() {
         let children = api::children(stack.roots[0].children[i], &heap)?;
@@ -93,7 +93,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
-    println!("{}", iterations);
+    // println!("{}", iterations);
     // now we have 20*20*12 + 20*20 + 20 total objects on heap, which is around 400*12 + 400 + 20 = 5220 objects
 
     // now remove some children at the second level
@@ -103,11 +103,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // now the live objects are like 20*15*12 + 20*15 + 20
     // which is less than 5220 objects, but the heap is still technically full
-    println!("we're still running");
+    // println!("we're still running");
     let temp = heap.alloc(&mut stack)?;
-    println!("yay garbage collection works");
+    // println!("yay garbage collection works");
 
-    stack.dump_all(&heap)?;
+    // stack.dump_all(&heap)?;
     fs::write(
         "profiling/heap.txt",
         format!("{:#?}", heap.committed_memory),
