@@ -14,6 +14,12 @@
 			"command": "flamegraph -o profiling/flamegraph.svg target/debug/gc-representation-rs",
 			"label": "flamegraph profile",
 			"problemMatcher": []
-		}
+		},
+		{
+			"type": "shell",
+			"command": "flamegraph -o profiling/flamegraph.svg cargo test insane -- --nocapture --test-threads=1",
+			"label": "TEST flamegraph profile",
+			"problemMatcher": []
+		},
 	]
 }

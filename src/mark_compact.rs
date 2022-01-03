@@ -68,10 +68,10 @@ impl MemoryManager for MarkCompactHeap {
 
     /// mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<()> {
-        // dbg!("exceeded heap size!");
+        dbg!("actually calling mark compact exceeded heap size!");
         // # mark first
         // create marking bitmap
-        // which isn't actually going to be a bitmap but rather a stack of node indices
+        // which isn't actually going to be a bitmap but rather a bunch of node indices
         let mut marked_nodes: Vec<NodePointer> = Vec::new();
 
         // create worklist, which is going to be a queue, since we're doing breadth-first traversal
@@ -93,6 +93,9 @@ impl MemoryManager for MarkCompactHeap {
             }
         }
         // now all our objects should be marked
+        // we need to maintain order so let's sort marked nodes
+        marked_nodes.sort();
+        // println!("{:#?}", marked_nodes[0]);
 
         let mut free = 0;
         // # compact next
@@ -108,6 +111,9 @@ impl MemoryManager for MarkCompactHeap {
                 api::set_forwarding_address(*marked, Some(NodePointer::new(free)), self)?;
                 // then bump free
                 free += 1;
+                if free > self.committed_memory.len() {
+                    return Err("not enough space on heap".into());
+                }
             }
         }
 
@@ -129,6 +135,7 @@ impl MemoryManager for MarkCompactHeap {
                 }
             }
         }
+        // println!("cool");
 
         {
             // actually move the objects

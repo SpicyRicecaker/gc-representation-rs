@@ -21,9 +21,7 @@ impl Stack {
             roots.push(node);
         });
 
-        Self {
-            roots
-        }
+        Self { roots }
     }
     /// Provides a breadth-first ordered print of all the reachable values on the stack
     /// keep in mind the stack pooints into the heap
@@ -119,7 +117,7 @@ pub mod api {
             node.value = value;
             Ok(())
         } else {
-            Err("node not found when trying to set value".into())
+            Err("PUBLIC node not found when trying to set value".into())
         }
     }
 
@@ -142,7 +140,7 @@ pub mod api {
             node.forwarding_address = forwarding_address;
             Ok(())
         } else {
-            Err("node not found when trying to set value".into())
+            Err("node not found when trying to set forwarding address value".into())
         }
     }
 
@@ -186,7 +184,7 @@ pub mod api {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodePointer {
     pub idx: usize,
 }

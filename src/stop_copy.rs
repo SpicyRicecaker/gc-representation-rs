@@ -12,7 +12,7 @@ pub struct StopAndCopyHeap {
     pub extent: usize,
     // where we allocate from
     pub free: usize,
-    //
+    pub top: usize,
     pub committed_memory: Vec<Node>,
 }
 
@@ -26,6 +26,7 @@ impl StopAndCopyHeap {
         Self {
             from_space: 0,
             to_space: extent,
+            top: 0,
             free: 0,
             committed_memory,
             extent,
@@ -110,6 +111,7 @@ impl MemoryManager for StopAndCopyHeap {
             // println!("to space after swap {} {}", self.to_space, self.from_space);
             // set our free pointer to the new space
             self.free = self.to_space;
+            self.top = self.to_space;
         }
         // the scan also starts from the beginning of the to_space
         let mut scan = self.free;
@@ -167,11 +169,15 @@ impl MemoryManager for StopAndCopyHeap {
 
     // we provide a slice from from space to to space!
     fn committed_memory(&self) -> &[Node] {
-        &self.committed_memory[self.from_space..self.from_space + self.extent]
+        // THIS DOESN'T WORK
+        unreachable!()
+        // &self.committed_memory[self.top..(self.top + self.extent)]
     }
 
     fn committed_memory_mut(&mut self) -> &mut [Node] {
-        &mut self.committed_memory[self.from_space..self.from_space + self.extent]
+        // THIS DOESN'T WORK
+        unreachable!()
+        // &mut self.committed_memory[self.top..(self.top + self.extent)]
     }
 }
 
@@ -241,7 +247,7 @@ pub mod stapi {
             node.value = value;
             Ok(())
         } else {
-            Err("node not found when trying to set value".into())
+            Err("PRIVATE: node not found when trying to set value".into())
         }
     }
 
@@ -264,7 +270,7 @@ pub mod stapi {
             node.forwarding_address = forwarding_address;
             Ok(())
         } else {
-            Err("node not found when trying to set value".into())
+            Err("PRIVATE: node not found when trying to set forwarding address value".into())
         }
     }
 
