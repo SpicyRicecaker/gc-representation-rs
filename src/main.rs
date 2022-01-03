@@ -1,17 +1,11 @@
 use gc_representation_rs::graph::*;
 
 use std::time;
+use std::fs;
 
 // we're implementing mark-compact first
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    const UNITS: usize = 500;
-    let strip = {
-        let mut strip = Vec::new();
-        (0..UNITS).for_each(|_| {
-            strip.push(Node::default());
-        });
-        strip
-    };
+    let strip = Vec::new();
     let roots = {
         let mut roots = Vec::new();
         (0..5).for_each(|i| {
@@ -27,10 +21,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stack = Stack { roots };
     // this is memory allocation
     let mut heap = Heap {
-        strip,
-        size: UNITS,
-        top: 0,
-        max: UNITS - 1,
+        committed_memory: strip,
+        max_size: 500,
+        // top: 0,
+        // max: UNITS - 1,
     };
     let start = time::Instant::now();
     // push some nodes onto the stack
@@ -76,6 +70,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     stack.dump_all(&heap)?;
+    fs::write("profiling/heap.txt", format!("{:#?}", heap.committed_memory))?;
+    
 
     // top-level roots, every thing else on stack
     //              a    1       // stack

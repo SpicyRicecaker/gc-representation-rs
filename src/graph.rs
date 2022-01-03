@@ -33,12 +33,12 @@ pub struct Heap {
     // the `top` of the memory != strip.len()
     // because we don't want to have to zero them out if we don't need to, and don't want to push / pop the vec
     // especially when we're compacting
-    pub strip: Vec<Node>,
-    // should be equal to strip.len()
-    pub size: usize,
-    // the size of the top, where the last piece of recognizable memory is. 1 less than strip.len()
-    pub top: usize,
-    pub max: usize,
+    pub committed_memory: Vec<Node>,
+    // when the length of vector len reaches the max
+    pub max_size: usize,
+    // // the size of the top, where the last piece of recognizable memory is. 1 less than strip.len()
+    // pub top: usize,
+    // pub max: usize,
 }
 
 impl Heap {
@@ -46,15 +46,14 @@ impl Heap {
     // we can just add a new node and return its id
     pub fn alloc(&mut self) -> Result<NodePointer> {
         // if we can fit
-        if self.top != self.size {
+        if self.committed_memory.len() < self.max_size {
             let node = Node::default();
             // set the node id to where the top of the heap is
-            let node_pointer = self.top;
+            let node_pointer = self.committed_memory.len();
             let node_pointer = NodePointer::new(node_pointer);
             // add it to the heap
-            self.strip.push(node);
-            // bump the node_pointer
-            self.top += 1;
+            // the node_pointer is technically also bumped after we push to it
+            self.committed_memory.push(node);
             Ok(node_pointer)
         } else {
             // we need to run gc
@@ -74,7 +73,7 @@ impl Heap {
 
     // breadth-first traversal of node, printing out
     pub fn dump(&self, node: NodePointer) {
-        if let Some(n) = self.strip.get(node.idx) {
+        if let Some(n) = self.committed_memory.get(node.idx) {
             if let Some(value) = n.value {
                 print!("{} ", value);
             }
@@ -94,13 +93,13 @@ pub mod api {
         child_node_pointer: NodePointer,
         heap: &mut Heap,
     ) -> Result<()> {
-        if let Some(child) = heap.strip.get_mut(child_node_pointer.idx) {
+        if let Some(child) = heap.committed_memory.get_mut(child_node_pointer.idx) {
             child.parent = Some(parent_node_pointer);
         } else {
             return Err("child not found while trying to add child to parent".into());
         }
 
-        if let Some(parent) = heap.strip.get_mut(parent_node_pointer.idx) {
+        if let Some(parent) = heap.committed_memory.get_mut(parent_node_pointer.idx) {
             parent.children.push(child_node_pointer);
             Ok(())
         } else {
@@ -109,7 +108,7 @@ pub mod api {
     }
 
     pub fn children(parent_node_pointer: NodePointer, heap: &Heap) -> Result<Vec<NodePointer>> {
-        if let Some(parent) = heap.strip.get(parent_node_pointer.idx) {
+        if let Some(parent) = heap.committed_memory.get(parent_node_pointer.idx) {
             Ok(parent.children.clone())
         } else {
             Err("parent not found while getting children".into())
@@ -117,7 +116,7 @@ pub mod api {
     }
 
     pub fn parent(child_node_pointer: NodePointer, heap: &Heap) -> Result<Option<NodePointer>> {
-        if let Some(child) = heap.strip.get(child_node_pointer.idx) {
+        if let Some(child) = heap.committed_memory.get(child_node_pointer.idx) {
             Ok(child.parent)
         } else {
             Err("child not found while getting parent".into())
@@ -125,14 +124,14 @@ pub mod api {
     }
 
     pub fn value(node_pointer: NodePointer, heap: &Heap) -> Result<Option<u32>> {
-        if let Some(node) = heap.strip.get(node_pointer.idx) {
+        if let Some(node) = heap.committed_memory.get(node_pointer.idx) {
             Ok(node.value)
         } else {
             Err("node not found when trying to get value".into())
         }
     }
     pub fn set_value(node_pointer: NodePointer, value: Option<u32>, heap: &mut Heap) -> Result<()> {
-        if let Some(node) = heap.strip.get_mut(node_pointer.idx) {
+        if let Some(node) = heap.committed_memory.get_mut(node_pointer.idx) {
             node.value = value;
             Ok(())
         } else {
@@ -140,7 +139,7 @@ pub mod api {
         }
     }
     pub fn get(node_pointer: NodePointer, heap: &Heap) -> Result<&Node> {
-        heap.strip
+        heap.committed_memory
             .get(node_pointer.idx)
             .ok_or_else(|| "node pointer not found".into())
     }
