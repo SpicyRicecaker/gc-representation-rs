@@ -50,7 +50,7 @@ pub struct Heap {
 impl Heap {
     // allocates a new node
     // we can just add a new node and return its id
-    pub fn alloc(&mut self) -> Result<NodePointer> {
+    pub fn alloc(&mut self, stack: &mut Stack) -> Result<NodePointer> {
         // if we can fit
         if self.committed_memory.len() < self.max_size {
             let node = Node::default();
@@ -63,18 +63,70 @@ impl Heap {
             Ok(node_pointer)
         } else {
             // we need to run gc
-            let freed = self.collect();
+            let freed = self.collect(stack)?;
             if freed != 0 {
-                self.alloc()
+                self.alloc(stack)
             } else {
                 Err("gg collection didn't result in any amount of garbage collected".into())
             }
         }
     }
 
-    /// mark compact
-    pub fn collect(&mut self) -> usize {
+    /// mark-compact algorithm
+    pub fn collect(&mut self, stack: &mut Stack) -> Result<usize> {
         dbg!("exceeded heap size!");
+        // # mark first
+        // create marking bitmap
+        // which isn't actually going to be a bitmap but rather a stack of node indices
+        let mut marked_nodes: Vec<NodePointer> = Vec::new();
+
+        // create worklist, which is going to be a queue, since we're doing breadth-first traversal
+        // now do a breadth-first traversal of the tree,
+        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
+        // populate worklist with children from stack first obviously
+        for root in &stack.roots {
+            for child in &root.children {
+                worklist.push_back(*child);
+            }
+        }
+        // we pop from front of queue
+        while let Some(node) = worklist.pop_front() {
+            // we mark it because it means it's accessible
+            marked_nodes.push(node);
+            // then add the rest of its children to the back of the queue
+            for child_node_pointer in &api::get(node, self)?.children {
+                worklist.push_back(*child_node_pointer);
+            }
+        }
+        // now all our objects should be marked
+
+        // # compact next
+        {
+            // first step is to calculate new locations of all objects
+
+            // we iterate over all objects in the heap
+            //
+            // free starts at 0
+            let mut free = 0;
+            //
+            // if it is marked, set its forwarding address equal to free
+            // then bump free
+            //
+        }
+
+        // update object references
+        //
+        // we create a worklist again
+        //
+        // for every marked parent
+        //   for every child of the marked node
+        //      get the actual child_node
+        //      then set the child_node to child node's forwarding address
+
+        // actually move the objects
+        //   for every marked node
+        //      swap node with node's forwarding position
+        //
         todo!()
     }
 
@@ -191,6 +243,7 @@ impl NodePointer {
 /// A node doesn't technically need a parent pointer, it's literally just there for eye candy
 #[derive(Debug, Default)]
 pub struct Node {
+    pub forwarding_address: Option<NodePointer>,
     pub parent: Option<NodePointer>,
     pub children: Vec<NodePointer>,
     pub value: Option<u32>,

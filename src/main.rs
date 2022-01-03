@@ -40,39 +40,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // for each child, add 2 more children
 
     // stack, 1st node
-    let first = &mut stack.roots[0];
+    // let first = &mut stack.roots[0];
 
     let mut iterations = 0;
     // add 20 children
     for _ in 0..20 {
         iterations += 1;
         // allocate and set the value that the node holds to 1 (for first layer)
-        let temp = heap.alloc()?;
+        let temp = heap.alloc(&mut stack)?;
         api::set_value(temp, Some(1), &mut heap)?;
 
         // add the node to the children
-        first.children.push(temp);
+        stack.roots[0].children.push(temp);
     }
 
     // for each child, add 20 more children
     let mut iterations_2 = 0;
-    for child in &first.children {
+    for i in 0..stack.roots[0].children.len() {
         iterations_2 += 1;
         for _ in 0..20 {
             iterations+=1;
-            let temp = heap.alloc()?;
+            let temp = heap.alloc(&mut stack)?;
             api::set_value(temp, Some(2), &mut heap)?;
-            api::add_child(*child, temp, &mut heap)?;
+            api::add_child(stack.roots[0].children[i], temp, &mut heap)?;
         }
     }
     dbg!(iterations_2);
     // for each child of child, add 20 more children
-    for child in &first.children {
-        let children = api::children(*child, &heap)?;
+    for i in 0..stack.roots[0].children.len() {
+        let children = api::children(stack.roots[0].children[i], &heap)?;
         for child in children {
             for _ in 0..12 {
                 // iterations+=1;
-                let temp = heap.alloc()?;
+                let temp = heap.alloc(&mut stack)?;
                 api::set_value(temp, Some(3), &mut heap)?;
                 api::add_child(child, temp, &mut heap)?;
                 // println!("{}", heap.committed_memory.len());
@@ -83,8 +83,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // now we have 20*20*12 + 20*20 + 20 total objects on heap, which is around 400*12 + 400 + 20 = 5220 objects
 
     // now remove some children at the second level
-    for child in &first.children {
-        api::delete_some_children(*child, &mut heap)?;
+    for i in 0..stack.roots[0].children.len() {
+        api::delete_some_children(stack.roots[0].children[i], &mut heap)?;
     }
 
     // now the live objects are like 20*15*12 + 20*15 + 20
