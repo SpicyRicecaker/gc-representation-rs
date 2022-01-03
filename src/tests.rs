@@ -93,18 +93,11 @@ fn sanity_garbage_collection_check_stopcopy() {
         roots
     };
     const SIZE: usize = 4;
-    let mut committed_memory = Vec::new();
-    for _ in 0..SIZE {
-        committed_memory.push(Node::default())
-    }
 
     // initializing the stack
     let mut stack = Stack { roots };
     // this is memory allocation
-    let mut heap = StopAndCopyHeap {
-        committed_memory,
-        free: 0,
-    };
+    let mut heap = StopAndCopyHeap::init(SIZE);
 
     // add one child to root
     let temp = heap.alloc(&mut stack).unwrap();
