@@ -4,30 +4,13 @@ use crate::stop_copy::*;
 
 #[test]
 fn sanity_garbage_collection_check_mark_and_copy() {
-    let roots = {
-        let mut roots = Vec::new();
-        (0..1).for_each(|i| {
-            let node = Node {
-                value: Some(i),
-                ..Default::default()
-            };
-            roots.push(node);
-        });
-        roots
-    };
-    const SIZE: usize = 4;
-    let mut committed_memory = Vec::new();
-    for _ in 0..SIZE {
-        committed_memory.push(Node::default())
-    }
 
+    const STACK_SIZE: usize = 1;
+    const HEAP_SIZE: usize = 4;
     // initializing the stack
-    let mut stack = Stack { roots };
-    // this is memory allocation
-    let mut heap = MarkCompactHeap {
-        committed_memory,
-        free: 0,
-    };
+    let mut stack = Stack::new(STACK_SIZE);
+    // initializing the heap
+    let mut heap = MarkCompactHeap::init(HEAP_SIZE);
 
     // add one child to root
     let temp = heap.alloc(&mut stack).unwrap();
@@ -81,24 +64,12 @@ fn sanity_garbage_collection_check_mark_and_copy() {
 
 #[test]
 fn sanity_garbage_collection_check_stop_and_copy() {
-    const SIZE: usize = 8;
-
-    let roots = {
-        let mut roots = Vec::new();
-        (0..1).for_each(|i| {
-            let node = Node {
-                value: Some(i),
-                ..Default::default()
-            };
-            roots.push(node);
-        });
-        roots
-    };
-
+    const STACK_SIZE: usize = 1;
+    const HEAP_SIZE: usize = 8;
     // initializing the stack
-    let mut stack = Stack { roots };
-    // this is memory allocation
-    let mut heap = StopAndCopyHeap::init(SIZE);
+    let mut stack = Stack::new(STACK_SIZE);
+    // initializing the heap
+    let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
     // add one child to root
     let temp = heap.alloc(&mut stack).unwrap();
@@ -150,7 +121,8 @@ fn sanity_garbage_collection_check_stop_and_copy() {
     // stack.dump_all(&heap).unwrap();
 }
 
-// #[test]
-// fn insane_stop_and_copy() {
-
-// }
+#[test]
+fn insane() {
+    // we spawn a sht ton of garbage
+    
+}

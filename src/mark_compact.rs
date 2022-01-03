@@ -19,6 +19,16 @@ pub struct MarkCompactHeap {
 }
 
 impl MarkCompactHeap {
+    pub fn init(size: usize) -> Self {
+        let mut committed_memory: Vec<Node> = Vec::new();
+        for _ in 0..size {
+            committed_memory.push(Node::default());
+        }
+        Self {
+            committed_memory,
+            free: 0,
+        }
+    }
     // breadth-first traversal of node, printing out
     pub fn dump(&self, node: NodePointer) {
         if let Some(n) = self.committed_memory.get(node.idx) {

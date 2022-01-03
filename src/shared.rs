@@ -10,6 +10,21 @@ pub struct Stack {
 }
 
 impl Stack {
+    /// number of roots you want to have
+    pub fn new(num_roots: usize) -> Self {
+        let mut roots = Vec::new();
+        (0..num_roots).for_each(|_| {
+            let node = Node {
+                value: Some(0),
+                ..Default::default()
+            };
+            roots.push(node);
+        });
+
+        Self {
+            roots
+        }
+    }
     /// Provides a breadth-first ordered print of all the reachable values on the stack
     /// keep in mind the stack pooints into the heap
     pub fn dump_all<T: MemoryManager>(&self, heap: &T) -> Result<()> {
