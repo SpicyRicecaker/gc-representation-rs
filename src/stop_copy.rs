@@ -6,31 +6,27 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 /// This mark-compact algorithm uses the LISP-2 style sliding algorithm
 /// Heap includes the graph data structure, and acts pretty much like an arena
 pub struct StopAndCopyHeap {
-    // // should be at the middle of the heap (len() / 2)
-    // pub from_space: usize,
-    // // should be at the bottom of the heap (0)
-    // pub to_space: usize,
-    // // where we allocate from
+    // should be at the middle of the heap (len() / 2)
+    pub from_space: usize,
+    // should be at the bottom of the heap (0)
+    pub to_space: usize,
+    // where we allocate from
     pub free: usize,
+    //
     pub committed_memory: Vec<Node>,
-    pub backup_memory: Vec<Node>,
 }
 
 impl StopAndCopyHeap {
-    /// allocates twice as much as the size you give it
     pub fn init(size: usize) -> Self {
         let mut committed_memory: Vec<Node> = Vec::new();
         for _ in 0..size {
             committed_memory.push(Node::default());
         }
-        let mut backup_memory: Vec<Node> = Vec::new();
-        for _ in 0..size {
-            backup_memory.push(Node::default());
-        }
         Self {
+            from_space: 0,
+            to_space: size / 2,
             free: 0,
             committed_memory,
-            backup_memory,
         }
     }
 }
@@ -61,11 +57,12 @@ impl MemoryManager for StopAndCopyHeap {
         todo!()
     }
 
+    // we provide a slice from from space to to space!
     fn committed_memory(&self) -> &[Node] {
-        &self.committed_memory
+        &self.committed_memory[self.from_space..self.from_space + self.to_space]
     }
 
     fn committed_memory_mut(&mut self) -> &mut [Node] {
-        &mut self.committed_memory
+        &mut self.committed_memory[self.from_space..self.from_space + self.to_space]
     }
 }
