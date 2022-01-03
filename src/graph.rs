@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use crate::graph::api::forwarding_address;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 #[derive(Debug)]
@@ -108,21 +110,37 @@ impl Heap {
             //
             // free starts at 0
             let mut free = 0;
-            //
-            // if it is marked, set its forwarding address equal to free
-            // then bump free
-            //
+            // if it is marked,
+            for marked in &marked_nodes {
+                // set its forwarding address equal to free
+                api::set_forwarding_address(*marked, Some(NodePointer::new(free)), self)?;
+                // then bump free
+                free += 1;
+            }
         }
 
-        // update object references
-        //
-        // we create a worklist again
-        //
-        // for every marked parent
-        //   for every child of the marked node
-        //      get the actual child_node
-        //      then set the child_node to child node's forwarding address
+        {
+            // now we update object references
+            //
+            //
+            // for every marked parent
+            for marked in &marked_nodes {
+                //   for every child of the marked node
+                for i in 0..api::get(*marked, self)?.children.len() {
+                    //      get the actual child_node's forwarding address
+                    let forwarding_address =
+                        api::forwarding_address(api::get(*marked, self)?.children[i], self)?
+                            .unwrap();
+                    //      then set the child_node to child node's forwarding address
+                    api::get_mut(api::get(*marked, self)?.children[i], self)?.forwarding_address =
+                        Some(forwarding_address);
+                }
+            }
+        }
 
+        {
+
+        }
         // actually move the objects
         //   for every marked node
         //      swap node with node's forwarding position
@@ -197,9 +215,39 @@ pub mod api {
             Err("node not found when trying to set value".into())
         }
     }
+
+    pub fn forwarding_address(
+        node_pointer: NodePointer,
+        heap: &Heap,
+    ) -> Result<Option<NodePointer>> {
+        if let Some(node) = heap.committed_memory.get(node_pointer.idx) {
+            Ok(node.forwarding_address)
+        } else {
+            Err("node not found when trying to get value".into())
+        }
+    }
+    pub fn set_forwarding_address(
+        node_pointer: NodePointer,
+        forwarding_address: Option<NodePointer>,
+        heap: &mut Heap,
+    ) -> Result<()> {
+        if let Some(node) = heap.committed_memory.get_mut(node_pointer.idx) {
+            node.forwarding_address = forwarding_address;
+            Ok(())
+        } else {
+            Err("node not found when trying to set value".into())
+        }
+    }
+
     pub fn get(node_pointer: NodePointer, heap: &Heap) -> Result<&Node> {
         heap.committed_memory
             .get(node_pointer.idx)
+            .ok_or_else(|| "node pointer not found".into())
+    }
+
+    pub fn get_mut(node_pointer: NodePointer, heap: &mut Heap) -> Result<&mut Node> {
+        heap.committed_memory
+            .get_mut(node_pointer.idx)
             .ok_or_else(|| "node pointer not found".into())
     }
     /// deletes some children given a parent node pointer and a mutable reference to heap
