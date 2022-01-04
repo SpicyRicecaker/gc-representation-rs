@@ -27,17 +27,6 @@ impl MarkCompactHeap {
             free: 0,
         }
     }
-    // breadth-first traversal of node, printing out
-    pub fn dump(&self, node_pointer: NodePointer) {
-        if let Some(node) = self.committed_memory.get(usize::from(node_pointer)) {
-            if let Some(value) = node.value {
-                print!("{} ", value);
-            }
-            for child in &node.children {
-                self.dump(*child);
-            }
-        }
-    }
 }
 
 impl MemoryManager for MarkCompactHeap {
@@ -65,7 +54,7 @@ impl MemoryManager for MarkCompactHeap {
 
     /// mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<()> {
-        dbg!("exceeded heap size! now calling collect function for mark_compact");
+        log::debug!("exceeded heap size! now calling collect function for mark_compact");
         // we want to mark all nodes first
 
         // create marking bitmap using breadth-first traversal of the tree,
@@ -262,6 +251,25 @@ impl MemoryManager for MarkCompactHeap {
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node> {
         self.committed_memory_mut()
             .get_mut(usize::from(node_pointer))
+    }
+
+    // breadh-first traversal of node, printing out
+    fn dump(&self, node_pointer: NodePointer) -> Result<String> {
+        let mut elements = Vec::new();
+
+        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
+        worklist.push_back(node_pointer);
+
+        while let Some(node_pointer) = worklist.pop_front() {
+            let node = self.get(node_pointer).unwrap();
+            if let Some(value) = node.value {
+                elements.push(value.to_string());
+            }
+            for child in &node.children {
+                worklist.push_back(*child);
+            }
+        }
+        Ok(elements.join(", "))
     }
     // / deletes some children given a parent node pointer and a mutable reference to heap
     // / returns a result of nothing

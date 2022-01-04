@@ -5,6 +5,10 @@ use std::collections::VecDeque;
 // use std::time::{Duration, Instant};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
+fn init_log() {
+        let _ = env_logger::builder().is_test(true).try_init();
+}
+
 fn recursively_add_children<T: MemoryManager>(
     parent_node_pointer: NodePointer,
     max_objects: usize,
@@ -26,7 +30,6 @@ fn recursively_add_children<T: MemoryManager>(
         for _ in 0..width {
             // if we're below the object limit
             if current_objects < max_objects {
-                dbg!(current_objects, max_objects, "so adding an object");
                 // create a new node on the heap
                 let node = Node {
                     value: Some(current_objects as u32),
@@ -59,6 +62,7 @@ fn seed_root<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<NodePo
 
 #[test]
 fn sanity_garbage_collection_check_mark_and_compact() {
+    init_log();
     // initializing the stack
     const STACK_SIZE: usize = 1;
     let mut stack = Stack::new(STACK_SIZE);
@@ -68,26 +72,38 @@ fn sanity_garbage_collection_check_mark_and_compact() {
 
     // first add one child (allocated on the heap) to our root on the stack
     let child_node_pointer = seed_root(&mut stack, &mut heap).unwrap();
-    // then add 3 objects
+    // then add 4 objects
     recursively_add_children(child_node_pointer, HEAP_SIZE - 1, &mut stack, &mut heap).unwrap();
 
     // explicit snapshot of heap here should show 1+4 objects in total
-    stack.dump_all(&heap).unwrap();
+    log::trace!("{}", stack.dump_all(&heap).unwrap());
 
-    dbg!("everything working as expected");
+    assert_eq!(stack.dump_all(&heap).unwrap(), "[0] 1, 0, 1, 2, 3");
+
+    log::debug!("successfully filled heap with {} objects", HEAP_SIZE);
 
     // ...but this action should now panic, since the heap is full
     assert!(heap.alloc(Node::default(), &mut stack).is_err());
-    
+
     // now we remove 0 from 1's children
-    // which should free up two slots after garbage collection
+    // which should free up *3* slots after garbage collection
+    log::trace!("now removing children of one node");
+
     heap.get_mut(child_node_pointer).unwrap().children.remove(0);
 
-    // now this shouldn't panic
-    recursively_add_children(child_node_pointer, 2, &mut stack, &mut heap).unwrap();
+    log::trace!("{}", stack.dump_all(&heap).unwrap());
 
+    assert_eq!(stack.dump_all(&heap).unwrap(), "[0] 1, 1");
+
+    log::debug!("successfully removed *3* children from heap");
+
+    // now this shouldn't panic, because we should automatically be able to clear heap
+    recursively_add_children(child_node_pointer, 3, &mut stack, &mut heap).unwrap();
     // but this should
     assert!(heap.alloc(Node::default(), &mut stack).is_err());
+    log::trace!("{}", stack.dump_all(&heap).unwrap());
+
+    log::info!("this garbage collector works");
 }
 
 // #[test]

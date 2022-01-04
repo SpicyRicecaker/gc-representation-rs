@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+// use std::collections::VecDeque;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -25,25 +25,19 @@ impl Stack {
     }
     /// Provides a breadth-first ordered print of all the reachable values on the stack
     /// keep in mind the stack pooints into the heap
-    pub fn dump_all<T: MemoryManager>(&self, heap: &T) -> Result<()> {
-        // create a new queue. We use queues for breadth-first search, stack for depth-first search
-        let mut queue = VecDeque::new();
-        // add roots of stack first obviously
+    pub fn dump_all<T: MemoryManager>(&self, heap: &T) -> Result<String> {
+        // for each root
+        let mut root_list = Vec::new();
         for root in &self.roots {
-            queue.push_back(root);
-        }
-        // we pop from front of queue
-        while let Some(node) = queue.pop_front() {
-            // print its value
-            if let Some(value) = node.value {
-                print!("{} ", value);
+            // aggregate the dump of all children in roots
+            let mut list_strings = Vec::new();
+            for child in &root.children {
+                list_strings.push(heap.dump(*child)?);
             }
-            // then add the rest of its children to the back of the queue
-            for child in &node.children {
-                queue.push_back(heap.get(*child).unwrap());
-            }
+            // compose all the list strings and add them to root_list
+            root_list.push(format!("[{}] {}", root.value.unwrap(), list_strings.join(" - ")));
         }
-        Ok(())
+        Ok(root_list.join("\n"))
     }
 }
 
@@ -54,8 +48,11 @@ pub trait MemoryManager {
     // by one of the lifetime ellision rules: given &self or &mut self, we apply the lifetime of &self to all output lifetimes
     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
+    // 
     fn committed_memory(&self) -> &[Node];
     fn committed_memory_mut(&mut self) -> &mut [Node];
+    // 
+    fn dump(&self, node_pointer: NodePointer) -> Result<String>;
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

@@ -188,4 +188,8 @@ impl MemoryManager for StopAndCopyHeap {
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node> {
         self.committed_memory.get_mut(usize::from(node_pointer))
     }
+
+    fn dump(&self, node_pointer: NodePointer) -> Result<String> {
+        todo!()
+    }
 }
