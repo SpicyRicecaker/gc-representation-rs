@@ -36,12 +36,12 @@ impl StopAndCopyHeap {
 
 impl StopAndCopyHeap {
     // breadth-first traversal of node, printing out
-    pub fn dump(&self, node: NodePointer) {
-        if let Some(n) = self.committed_memory.get(node.idx) {
-            if let Some(value) = n.value {
+    pub fn dump(&self, node_pointer: NodePointer) {
+        if let Some(node) = self.committed_memory.get(usize::from(node_pointer)) {
+            if let Some(value) = node.value {
                 print!("{} ", value);
             }
-            for child in &n.children {
+            for child in &node.children {
                 self.dump(*child);
             }
         }
@@ -51,21 +51,21 @@ impl StopAndCopyHeap {
     pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
         // if object has a forwarding address, it means that we've already moved it over to to space, so we can just give it its reference
         // dbg!(node_pointer, stapi::value(node_pointer, self)?);
-        if let Some(forwarding_address) = stapi::forwarding_address(node_pointer, self)? {
+        if let Some(forwarding_address) = self.get(node_pointer).unwrap().forwarding_address {
             Ok(forwarding_address)
         } else {
-            let new_node_pointer = NodePointer::new(self.free);
+            let new_node_pointer = NodePointer::from(self.free);
             // otherwise, the new nodepointer value of this object will be whatever free there is
             // now use .swap() to move nodepointer current location to its new location free
             self.committed_memory
-                .swap(node_pointer.idx, new_node_pointer.idx);
+                .swap(usize::from(node_pointer), usize::from(new_node_pointer));
 
             // and remember to set the forwarding address of the moved nodepointer to none
-            stapi::set_forwarding_address(new_node_pointer, None, self)?;
+            self.get_mut(new_node_pointer).unwrap().forwarding_address = None;
 
             // now update the old forwarding address to include itself
             // keep in mind that this object in to space is complete garbage except for the forwarding address part
-            stapi::set_forwarding_address(node_pointer, Some(new_node_pointer), self)?;
+            self.get_mut(node_pointer).unwrap().forwarding_address = Some(new_node_pointer);
 
             // also remember to bump free
             self.free += 1;
@@ -79,7 +79,7 @@ impl StopAndCopyHeap {
 impl MemoryManager for StopAndCopyHeap {
     // allocates a new node
     // we can just add a new node and return its id
-    fn alloc(&mut self, stack: &mut Stack) -> Result<NodePointer> {
+    fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
         // check if free is going over fromspace + tospace
         if self.free >= self.from_space + self.to_space {
             // we need to run gc
@@ -89,11 +89,10 @@ impl MemoryManager for StopAndCopyHeap {
             return Err("gg collection didn't result in any amount of garbage collected".into());
         }
 
-        let node = Node::default();
         // set the node id to where the top of the heap is
-        let node_pointer = NodePointer::new(self.free);
+        let node_pointer = NodePointer::from(self.free);
         // add it to the heap
-        self.committed_memory[node_pointer.idx] = node;
+        self.committed_memory[usize::from(node_pointer)] = node;
         // bump the free pointer
         self.free += 1;
 
@@ -129,7 +128,7 @@ impl MemoryManager for StopAndCopyHeap {
                     // dbg!(*child);
                     // dbg!("value of child", stapi::value(*child, self)?);
                     // make sure to update the root refs to point in the right place
-                    // *child = self.copy(*child)?;
+                    *child = self.copy(*child)?;
                 }
             }
         }
@@ -142,20 +141,20 @@ impl MemoryManager for StopAndCopyHeap {
             // well, so long as the scan does not catch up to free
             // that is, so as long as we have not processed every single "copied" oject on the heap, keep on going
             while scan < self.free {
-                let scan_node_pointer = NodePointer::new(scan);
+                let scan_node_pointer = NodePointer::from(scan);
                 // get all references, or children of the object that was recently copied to tospace
                 //
                 //
                 //  ... to copy the references over,
-                for i in 0..stapi::get(scan_node_pointer, self)?.children.len() {
+                for i in 0..self.get(scan_node_pointer).unwrap().children.len() {
                     // set the reference to whatever the forwarding address stored inside the reference is, or copy it
                     //
                     // TL;DR the reference should now be pointing to copied objects in the tospace no matter what
                     //
                     // I don't know how I fked the api up this bad to make this function look like this jargon but yea it happens
-                    stapi::get_mut(stapi::get(scan_node_pointer, self)?.children[i], self)?
+                    self.get_mut(self.get(scan_node_pointer).unwrap().children[i]).unwrap()
                         .forwarding_address =
-                        Some(stapi::get(scan_node_pointer, self)?.children[i]);
+                        Some(self.get(scan_node_pointer).unwrap().children[i]);
                     // the references get added to the worklist automatically
                 }
                 // don't forget to bump the scan pointer
@@ -179,137 +178,14 @@ impl MemoryManager for StopAndCopyHeap {
         unreachable!()
         // &mut self.committed_memory[self.top..(self.top + self.extent)]
     }
-}
 
-/// don't have time, but would clean this up in two steps
-/// first make this api a Memory Manager trait implementation
-/// make a seperate mandatory internal API that uses the front API's code by default
-pub mod stapi {
-    type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-    use crate::shared::{Node, NodePointer};
-
-    use super::StopAndCopyHeap;
-
-    pub fn add_child(
-        parent_node_pointer: NodePointer,
-        child_node_pointer: NodePointer,
-        heap: &mut StopAndCopyHeap,
-    ) -> Result<()> {
-        if let Some(child) = heap.committed_memory.get_mut(child_node_pointer.idx) {
-            child.parent = Some(parent_node_pointer);
-        } else {
-            return Err("child not found while trying to add child to parent".into());
-        }
-
-        if let Some(parent) = heap.committed_memory.get_mut(parent_node_pointer.idx) {
-            parent.children.push(child_node_pointer);
-            Ok(())
-        } else {
-            Err("parent not found while adding child".into())
-        }
+    #[inline(always)]
+    fn get(&self, node_pointer: NodePointer) -> Option<&Node> {
+        self.committed_memory.get(usize::from(node_pointer))
     }
 
-    pub fn children(
-        parent_node_pointer: NodePointer,
-        heap: &StopAndCopyHeap,
-    ) -> Result<Vec<NodePointer>> {
-        if let Some(parent) = heap.committed_memory.get(parent_node_pointer.idx) {
-            Ok(parent.children.clone())
-        } else {
-            Err("parent not found while getting children".into())
-        }
-    }
-
-    pub fn parent(
-        child_node_pointer: NodePointer,
-        heap: &StopAndCopyHeap,
-    ) -> Result<Option<NodePointer>> {
-        if let Some(child) = heap.committed_memory.get(child_node_pointer.idx) {
-            Ok(child.parent)
-        } else {
-            Err("child not found while getting parent".into())
-        }
-    }
-
-    pub fn value(node_pointer: NodePointer, heap: &StopAndCopyHeap) -> Result<Option<u32>> {
-        if let Some(node) = heap.committed_memory.get(node_pointer.idx) {
-            Ok(node.value)
-        } else {
-            Err("node not found when trying to get value".into())
-        }
-    }
-    pub fn set_value(
-        node_pointer: NodePointer,
-        value: Option<u32>,
-        heap: &mut StopAndCopyHeap,
-    ) -> Result<()> {
-        if let Some(node) = heap.committed_memory.get_mut(node_pointer.idx) {
-            node.value = value;
-            Ok(())
-        } else {
-            Err("PRIVATE: node not found when trying to set value".into())
-        }
-    }
-
-    pub fn forwarding_address(
-        node_pointer: NodePointer,
-        heap: &StopAndCopyHeap,
-    ) -> Result<Option<NodePointer>> {
-        if let Some(node) = heap.committed_memory.get(node_pointer.idx) {
-            Ok(node.forwarding_address)
-        } else {
-            Err("node not found when trying to get forwarding address".into())
-        }
-    }
-    pub fn set_forwarding_address(
-        node_pointer: NodePointer,
-        forwarding_address: Option<NodePointer>,
-        heap: &mut StopAndCopyHeap,
-    ) -> Result<()> {
-        if let Some(node) = heap.committed_memory.get_mut(node_pointer.idx) {
-            node.forwarding_address = forwarding_address;
-            Ok(())
-        } else {
-            Err("PRIVATE: node not found when trying to set forwarding address value".into())
-        }
-    }
-
-    pub fn get(node_pointer: NodePointer, heap: &StopAndCopyHeap) -> Result<&Node> {
-        heap.committed_memory
-            .get(node_pointer.idx)
-            .ok_or_else(|| "node not found when trying to get it immutably from heap".into())
-    }
-
-    pub fn get_mut(node_pointer: NodePointer, heap: &mut StopAndCopyHeap) -> Result<&mut Node> {
-        heap.committed_memory
-            .get_mut(node_pointer.idx)
-            .ok_or_else(|| "node not found when trying to get it mutably from heap".into())
-    }
-    /// deletes some children given a parent node pointer and a mutable reference to heap
-    /// returns a result of nothing
-    ///
-    /// keep in mind that we cannot delete a node directly given a node pointer
-    /// because we don't know exactly how many nodes are pointing to it
-    /// we would have to do a complete traversal of the tree just to delete a node (which defeats the point of having this data structure)
-    /// so instead we only allow deletions from parent
-    ///
-    /// this also means that a tree data structure doesn't quite perfectly
-    /// represent the memory of a program, since trees only have one parent reference anyway
-    pub fn delete_some_children(
-        parent_node_pointer: NodePointer,
-        number_to_remove: usize,
-        heap: &mut StopAndCopyHeap,
-    ) -> Result<()> {
-        // go to parent
-        if let Some(parent) = heap.committed_memory.get_mut(parent_node_pointer.idx) {
-            // delete x number of children
-            // we can just delete 5 children for now
-            for _ in 0..number_to_remove {
-                parent.children.pop();
-            }
-        } else {
-            return Err("(delete) node to delete children from does not exist".into());
-        };
-        Ok(())
+    #[inline(always)]
+    fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node> {
+        self.committed_memory.get_mut(usize::from(node_pointer))
     }
 }
