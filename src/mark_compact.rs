@@ -162,108 +162,15 @@ impl MemoryManager for MarkCompactHeap {
         self.free = free;
         Ok(())
     }
-
-    fn committed_memory(&self) -> &[Node] {
-        &self.committed_memory
-    }
-
-    fn committed_memory_mut(&mut self) -> &mut [Node] {
-        &mut self.committed_memory
-    }
-    // pub fn add_child<T: MemoryManager>(
-    //     parent_node_pointer: NodePointer,
-    //     child_node_pointer: NodePointer,
-    //     heap: &mut T,
-    // ) -> Result<()> {
-    //     if let Some(child) = heap.committed_memory_mut().get_mut(child_node_pointer.idx) {
-    //         child.parent = Some(parent_node_pointer);
-    //     } else {
-    //         return Err("child not found while trying to add child to parent".into());
-    //     }
-
-    //     if let Some(parent) = heap.committed_memory_mut().get_mut(parent_node_pointer.idx) {
-    //         parent.children.push(child_node_pointer);
-    //         Ok(())
-    //     } else {
-    //         Err("parent not found while adding child".into())
-    //     }
-    // }
-
-    // pub fn children<T: MemoryManager>(
-    //     parent_node_pointer: NodePointer,
-    //     heap: &T,
-    // ) -> Result<Vec<NodePointer>> {
-    //     if let Some(parent) = heap.committed_memory().get(parent_node_pointer.idx) {
-    //         Ok(parent.children.clone())
-    //     } else {
-    //         Err("parent not found while getting children".into())
-    //     }
-    // }
-
-    // pub fn parent<T: MemoryManager>(
-    //     child_node_pointer: NodePointer,
-    //     heap: &T,
-    // ) -> Result<Option<NodePointer>> {
-    //     if let Some(child) = heap.committed_memory().get(child_node_pointer.idx) {
-    //         Ok(child.parent)
-    //     } else {
-    //         Err("child not found while getting parent".into())
-    //     }
-    // }
-
-    // pub fn value<T: MemoryManager>(node_pointer: NodePointer, heap: &T) -> Result<Option<u32>> {
-    //     if let Some(node) = heap.committed_memory().get(node_pointer.idx) {
-    //         Ok(node.value)
-    //     } else {
-    //         Err("node not found when trying to get value".into())
-    //     }
-    // }
-
-    // pub fn set_value<T: MemoryManager>(
-    //     node_pointer: NodePointer,
-    //     value: Option<u32>,
-    //     heap: &mut T,
-    // ) -> Result<()> {
-    //     if let Some(node) = heap.committed_memory_mut().get_mut(node_pointer.idx) {
-    //         node.value = value;
-    //         Ok(())
-    //     } else {
-    //         Err("PUBLIC node not found when trying to set value".into())
-    //     }
-    // }
-
-    // pub fn forwarding_address<T: MemoryManager>(
-    //     node_pointer: NodePointer,
-    //     heap: &T,
-    // ) -> Result<Option<NodePointer>> {
-    //     if let Some(node) = heap.committed_memory().get(node_pointer.idx) {
-    //         Ok(node.forwarding_address)
-    //     } else {
-    //         Err("node not found when trying to get forwarding address".into())
-    //     }
-    // }
-
-    // pub fn set_forwarding_address<T: MemoryManager>(
-    //     node_pointer: NodePointer,
-    //     forwarding_address: Option<NodePointer>,
-    //     heap: &mut T,
-    // ) -> Result<()> {
-    //     if let Some(node) = heap.committed_memory_mut().get_mut(node_pointer.idx) {
-    //         node.forwarding_address = forwarding_address;
-    //         Ok(())
-    //     } else {
-    //         Err("node not found when trying to set forwarding address value".into())
-    //     }
-    // }
-
+    
     #[inline(always)]
     fn get(&self, node_pointer: NodePointer) -> Option<&Node> {
-        self.committed_memory().get(usize::from(node_pointer))
+        self.committed_memory.get(usize::from(node_pointer))
     }
 
     #[inline(always)]
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node> {
-        self.committed_memory_mut()
+        self.committed_memory
             .get_mut(usize::from(node_pointer))
     }
 
@@ -285,31 +192,4 @@ impl MemoryManager for MarkCompactHeap {
         }
         Ok(elements.join(", "))
     }
-    // / deletes some children given a parent node pointer and a mutable reference to heap
-    // / returns a result of nothing
-    // /
-    // / keep in mind that we cannot delete a node directly given a node pointer
-    // / because we don't know exactly how many nodes are pointing to it
-    // / we would have to do a complete traversal of the tree just to delete a node (which defeats the point of having this data structure)
-    // / so instead we only allow deletions from parent
-    // /
-    // / this also means that a tree data structure doesn't quite perfectly
-    // / represent the memory of a program, since trees only have one parent reference anyway
-    // pub fn delete_some_children<T: MemoryManager>(
-    //     parent_node_pointer: NodePointer,
-    //     number_to_remove: usize,
-    //     heap: &mut T,
-    // ) -> Result<()> {
-    //     // go to parent
-    //     if let Some(parent) = heap.committed_memory_mut().get_mut(parent_node_pointer.idx) {
-    //         // delete x number of children
-    //         // we can just delete 5 children for now
-    //         for _ in 0..number_to_remove {
-    //             parent.children.pop();
-    //         }
-    //     } else {
-    //         return Err("(delete) node to delete children from does not exist".into());
-    //     };
-    //     Ok(())
-    // }
 }

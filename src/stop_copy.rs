@@ -167,19 +167,6 @@ impl MemoryManager for StopAndCopyHeap {
         Ok(())
     }
 
-    // we provide a slice from from space to to space!
-    fn committed_memory(&self) -> &[Node] {
-        // THIS DOESN'T WORK
-        unreachable!()
-        // &self.committed_memory[self.top..(self.top + self.extent)]
-    }
-
-    fn committed_memory_mut(&mut self) -> &mut [Node] {
-        // THIS DOESN'T WORK
-        unreachable!()
-        // &mut self.committed_memory[self.top..(self.top + self.extent)]
-    }
-
     #[inline(always)]
     fn get(&self, node_pointer: NodePointer) -> Option<&Node> {
         self.committed_memory.get(usize::from(node_pointer))

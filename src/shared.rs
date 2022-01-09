@@ -53,8 +53,8 @@ pub trait MemoryManager {
     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
     //
-    fn committed_memory(&self) -> &[Node];
-    fn committed_memory_mut(&mut self) -> &mut [Node];
+    // fn committed_memory(&self) -> &[Node];
+    // fn committed_memory_mut(&mut self) -> &mut [Node];
     //
     fn dump(&self, node_pointer: NodePointer) -> Result<String>;
 }
