@@ -35,7 +35,11 @@ impl Stack {
                 list_strings.push(heap.dump(*child)?);
             }
             // compose all the list strings and add them to root_list
-            root_list.push(format!("[{}] {}", root.value.unwrap(), list_strings.join(" - ")));
+            root_list.push(format!(
+                "[{}] {}",
+                root.value.unwrap(),
+                list_strings.join(" - ")
+            ));
         }
         Ok(root_list.join("\n"))
     }
@@ -48,10 +52,10 @@ pub trait MemoryManager {
     // by one of the lifetime ellision rules: given &self or &mut self, we apply the lifetime of &self to all output lifetimes
     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
-    // 
+    //
     fn committed_memory(&self) -> &[Node];
     fn committed_memory_mut(&mut self) -> &mut [Node];
-    // 
+    //
     fn dump(&self, node_pointer: NodePointer) -> Result<String>;
 }
 

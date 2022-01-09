@@ -6,7 +6,7 @@ use std::collections::VecDeque;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn init_log() {
-        let _ = env_logger::builder().is_test(true).try_init();
+    let _ = env_logger::builder().is_test(true).try_init();
 }
 
 fn recursively_add_children<T: MemoryManager>(
@@ -104,6 +104,98 @@ fn sanity_garbage_collection_check_mark_and_compact() {
     log::trace!("{}", stack.dump_all(&heap).unwrap());
 
     log::info!("this garbage collector works");
+}
+
+#[test]
+fn actual_test_mark_compact() -> Result<()> {
+    init_log();
+    const STACK_SIZE: usize = 1;
+    const HEAP_SIZE: usize = 1_000_000;
+    // initializing the stack
+    let mut stack = Stack::new(STACK_SIZE);
+    // initializing the heap
+    let mut heap = MarkCompactHeap::init(HEAP_SIZE);
+
+    // first add one child (allocated on the heap) to our root on the stack
+    {
+        let child_node_pointer = seed_root(&mut stack, &mut heap).unwrap();
+
+        // fill up the heap with an ungodly amount of nodes
+        recursively_add_children(child_node_pointer, HEAP_SIZE - 1, &mut stack, &mut heap).unwrap();
+
+        // heap freed
+        log::debug!("this is the size of the filled heap: {}/{}", heap.free, HEAP_SIZE);
+    }
+
+    // the way that the tree was filled, nodes at the end of the heap are at the bottom of the tree
+    // let's add some interesting refs from parent to children and children to parent
+    // assume that we're removing an object at ~8000
+    {
+        // link parent to child after point of removal
+        heap.get_mut(NodePointer::from(100))
+            .unwrap()
+            .children
+            .push(NodePointer::from(16383));
+        // link parent to child before point of removal
+        heap.get_mut(NodePointer::from(100))
+            .unwrap()
+            .children
+            .push(NodePointer::from(300));
+        // link child after point of removal to parent
+        heap.get_mut(NodePointer::from(8191))
+            .unwrap()
+            .children
+            .push(NodePointer::from(500));
+        // link child before point of removal to parent
+        heap.get_mut(NodePointer::from(5000))
+            .unwrap()
+            .children
+            .push(NodePointer::from(400));
+        
+        // cyclic data structure that should be removed
+        heap.get_mut(NodePointer::from(9000))
+            .unwrap()
+            .children
+            .push(NodePointer::from(10_000));
+        heap.get_mut(NodePointer::from(10_000))
+            .unwrap()
+            .children
+            .push(NodePointer::from(9000));
+    }
+
+    {
+        // now delete a few nodes
+        // parent to child
+        log::trace!(
+            "parent to delete child from from found: {:#?}",
+            heap.get_mut(NodePointer::from(8000)).unwrap().children
+        );
+        heap.get_mut(NodePointer::from(8000))
+            .unwrap()
+            .children
+            .pop();
+        heap.alloc(Node::default(), &mut stack).unwrap();
+        log::debug!(
+            "this is the size of the cleaned up heap: {}/{}",
+            heap.free,
+            HEAP_SIZE
+        );
+    }
+
+    // allocate a bunch of garbage just to be sure
+    for _ in 0..100 {
+        heap.alloc(Node::default(), &mut stack).unwrap();
+    }
+
+    // top-level roots, every thing else on stack
+    //              a    1       // stack
+    //           /    \    \
+    //          b      c    2     // heap, and below
+    //        / \     / \
+    //       d   e   f   g
+    //      / \ / \ / \ /
+    //     h  i j k l m n
+    Ok(())
 }
 
 // #[test]
@@ -204,97 +296,6 @@ fn sanity_garbage_collection_check_mark_and_compact() {
 //     }
 
 //     dbg!("done", start.elapsed());
-// }
-
-// #[test]
-// fn actual_test_mark_compact() -> Result<()>{
-//     // create a fixed memory heap that's "zerod" with empty nodes
-//     // also the max size of the heap, like when you pass a -XMX [size] flag into java vm
-//     // or the total amount of physical memory on a system
-//     const STACK_SIZE: usize = 100;
-//     const HEAP_SIZE: usize = 1_001_000;
-//     // initializing the stack
-//     let mut stack = Stack::new(STACK_SIZE);
-//     // initializing the heap
-//     let mut heap = MarkCompactHeap::init(HEAP_SIZE);
-
-//     // stack, 1st node
-//     // add 2 children
-//     // for each child, add 2 more children
-
-//     // add 20 children
-//     for _ in 0..100 {
-//         // allocate and set the value that the node holds to 1 (for first layer)
-//         let temp = heap.alloc(&mut stack)?;
-//         api::set_value(temp, Some(1), &mut heap)?;
-
-//         // add the node to the children
-//         stack.roots[0].children.push(temp);
-//     }
-//     // dbg!("added children to root");
-
-//     // for each child, add 20 more children
-//     for i in 0..stack.roots[0].children.len() {
-//         for _ in 0..100 {
-//             let temp = heap.alloc(&mut stack)?;
-//             api::set_value(temp, Some(2), &mut heap)?;
-//             api::add_child(stack.roots[0].children[i], temp, &mut heap)?;
-//         }
-//     }
-//     // dbg!(iterations_2);
-//     // for each child of child, add 20 more children
-//     for i in 0..stack.roots[0].children.len() {
-//         let children = api::children(stack.roots[0].children[i], &heap)?;
-//         for child in children {
-//             for _ in 0..50 {
-//                 // iterations+=1;
-//                 let temp = heap.alloc(&mut stack)?;
-//                 api::set_value(temp, Some(3), &mut heap)?;
-//                 api::add_child(child, temp, &mut heap)?;
-//                 // println!("{}", heap.committed_memory.len());
-//             }
-//         }
-//     }
-//     // println!("{}", iterations);
-//     // now we have 20*20*12 + 20*20 + 20 total objects on heap, which is around 400*12 + 400 + 20 = 5220 objects
-
-//     // now remove some children at the second level
-//     for i in 0..stack.roots[0].children.len() {
-//         api::delete_some_children(stack.roots[0].children[i], 19, &mut heap)?;
-//     }
-
-//     // now the live objects are like 20*15*12 + 20*15 + 20
-//     // which is less than 5220 objects, but the heap is still technically full
-//     // println!("we're still running");
-//     for i in 0..stack.roots[0].children.len() {
-//         let children = api::children(stack.roots[0].children[i], &heap)?;
-//         for child in children {
-//             for _ in 0..120 {
-//                 // iterations+=1;
-//                 let temp = heap.alloc(&mut stack)?;
-//                 api::set_value(temp, Some(3), &mut heap)?;
-//                 api::add_child(child, temp, &mut heap)?;
-//                 // println!("{}", heap.committed_memory.len());
-//             }
-//         }
-//     }
-//     // println!("yay garbage collection works");
-
-//     // stack.dump_all(&heap)?;
-//     // fs::write(
-//     //     "profiling/heap.txt",
-//     //     format!("{:#?}", heap.committed_memory),
-//     // )?;
-
-//     // top-level roots, every thing else on stack
-//     //              a    1       // stack
-//     //           /    \    \
-//     //          b      c    2     // heap, and below
-//     //        / \     / \
-//     //       d   e   f   g
-//     //      / \ / \ / \ /
-//     //     h  i j k l m n
-//     Ok(())
 // }
 
 // #[test]

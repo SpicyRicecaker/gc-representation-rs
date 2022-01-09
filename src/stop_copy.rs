@@ -152,7 +152,8 @@ impl MemoryManager for StopAndCopyHeap {
                     // TL;DR the reference should now be pointing to copied objects in the tospace no matter what
                     //
                     // I don't know how I fked the api up this bad to make this function look like this jargon but yea it happens
-                    self.get_mut(self.get(scan_node_pointer).unwrap().children[i]).unwrap()
+                    self.get_mut(self.get(scan_node_pointer).unwrap().children[i])
+                        .unwrap()
                         .forwarding_address =
                         Some(self.get(scan_node_pointer).unwrap().children[i]);
                     // the references get added to the worklist automatically

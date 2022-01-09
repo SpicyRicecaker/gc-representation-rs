@@ -1,3 +1,4 @@
+use bitvec::prelude::*;
 use std::collections::VecDeque;
 
 use crate::shared::*;
@@ -57,10 +58,8 @@ impl MemoryManager for MarkCompactHeap {
         log::debug!("exceeded heap size! now calling collect function for mark_compact");
         // we want to mark all nodes first
 
-        // create marking bitmap using breadth-first traversal of the tree,
-        // which isn't actually going to be a bitmap but rather a bunch of node
-        // indices
-        let mut marked_node_pointers: Vec<NodePointer> = Vec::new();
+        // create marking bitmap using breadth-first traversal of the tree
+        let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
         {
             // first create a worklist, which is going to be a queue, since we're doing breadth-first traversal
             let mut worklist: VecDeque<NodePointer> = VecDeque::new();
@@ -71,20 +70,30 @@ impl MemoryManager for MarkCompactHeap {
                     worklist.push_back(*child);
                 }
             }
-
             // then we just keep on taking from the worklist until it's empty
             while let Some(node) = worklist.pop_front() {
-                // we mark it because it means it's accessible
-                marked_node_pointers.push(node);
-                // then add the rest of its children to the back of the queue
-                for child_node_pointer in &self.get(node).unwrap().children {
-                    worklist.push_back(*child_node_pointer);
+                // if the node isn't already marked
+                if !marked_node_pointers[usize::from(node)] {
+                    // we mark it because it means it's accessible
+                    marked_node_pointers.set(usize::from(node), true);
+                    // then add the rest of its children to the back of the queue
+                    for child_node_pointer in &self.get(node).unwrap().children {
+                        worklist.push_back(*child_node_pointer);
+                    }
                 }
             }
         }
-        // now all our objects should be marked
-        // we need to maintain order so let's sort marked nodes
-        marked_node_pointers.sort();
+        // now all our reachable objects should be marked, everything not in the list is garbo
+        // we only care about the marked objects from now on
+        // log::trace!(
+        //     "marked_node_pointers is this long: {}",
+        //     marked_node_pointers.len()
+        // );
+        let iterator = marked_node_pointers.iter().enumerate().filter(|(_, v)| **v);
+        log::trace!(
+            "we have this many marked nodes: {}",
+            iterator.clone().count()
+        );
 
         // free starts at 0, the beginning of the point which we wish to compact to
         let mut free = 0;
@@ -94,16 +103,18 @@ impl MemoryManager for MarkCompactHeap {
 
             // we iterate over all objects in the heap TODO vec of nodes seems really inefficient
             // if it is marked,
-            for marked_node_pointer in &marked_node_pointers {
-                let mut marked_node = self.get_mut(*marked_node_pointer).unwrap();
+            iterator.clone().try_for_each(|(idx, _)| -> Result<()> {
+                let mut marked_node = self.get_mut(NodePointer::from(idx)).unwrap();
                 // set its forwarding address equal to free
                 marked_node.forwarding_address = Some(NodePointer::from(free));
                 // then bump free
                 free += 1;
                 if free > self.committed_memory.len() {
-                    return Err("not enough space on heap".into());
+                    Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into())
+                } else {
+                    Ok(())
                 }
-            }
+            })?;
         }
 
         {
@@ -111,10 +122,10 @@ impl MemoryManager for MarkCompactHeap {
             //
             //
             // for every marked parent
-            for marked_node_pointer in &marked_node_pointers {
+            iterator.clone().for_each(|(idx, _)| {
                 //   for every child of the marked node
-                for i in 0..self.get_mut(*marked_node_pointer).unwrap().children.len() {
-                    let child_node_pointer = self.get(*marked_node_pointer).unwrap().children[i];
+                for i in 0..self.get_mut(NodePointer::from(idx)).unwrap().children.len() {
+                    let child_node_pointer = self.get(NodePointer::from(idx)).unwrap().children[i];
                     //  get the actual child_node's forwarding address
                     let forwarding_address = self
                         .get(child_node_pointer)
@@ -123,27 +134,30 @@ impl MemoryManager for MarkCompactHeap {
                         .unwrap();
 
                     //  then set the child_node to child node's forwarding address
-                    self.get_mut(*marked_node_pointer).unwrap().children[i] = forwarding_address;
+                    self.get_mut(NodePointer::from(idx)).unwrap().children[i] = forwarding_address;
                 }
-            }
+            });
         }
         // println!("cool");
 
         {
             // actually move the objects
             //   for every marked node
-            for marked_node_pointer in marked_node_pointers {
+            iterator.for_each(|(idx, _)| {
                 let forwarding_address = self
-                    .get(marked_node_pointer)
+                    .get(NodePointer::from(idx))
                     .unwrap()
                     .forwarding_address
                     .unwrap();
-                // swap node's current position with node's forwarding position
-                self.committed_memory.swap(
-                    usize::from(marked_node_pointer),
-                    usize::from(forwarding_address),
-                );
-            }
+                // swap node's current position with node's forwarding position,
+                // as long as they're not already in the right palce
+                if usize::from(forwarding_address) != idx {
+                    self.committed_memory.swap(
+                        usize::from(NodePointer::from(idx)),
+                        usize::from(forwarding_address),
+                    );
+                }
+            });
         }
         self.free = free;
         Ok(())
