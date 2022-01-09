@@ -21,5 +21,13 @@
 			"label": "TEST flamegraph profile",
 			"problemMatcher": []
 		},
+		{
+			"type": "shell",
+			"command": "RUST_LOG=trace cargo test -- --nocapture --test-threads=1",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"label": "rust: cargo run"
+		}
 	]
 }

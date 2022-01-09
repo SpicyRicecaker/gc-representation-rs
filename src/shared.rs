@@ -52,10 +52,7 @@ pub trait MemoryManager {
     // by one of the lifetime ellision rules: given &self or &mut self, we apply the lifetime of &self to all output lifetimes
     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
-    //
-    // fn committed_memory(&self) -> &[Node];
-    // fn committed_memory_mut(&mut self) -> &mut [Node];
-    //
+    fn free(&self) -> usize;
     fn dump(&self, node_pointer: NodePointer) -> Result<String>;
 }
 

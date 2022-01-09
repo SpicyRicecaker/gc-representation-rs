@@ -192,4 +192,8 @@ impl MemoryManager for MarkCompactHeap {
         }
         Ok(elements.join(", "))
     }
+
+    fn free(&self) -> usize {
+        self.free
+    }
 }
