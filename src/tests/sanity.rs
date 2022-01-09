@@ -45,18 +45,6 @@ fn sanity_garbage_collection<T: MemoryManager>(
 }
 
 #[test]
-fn stop_copy_sanity() {
-    // initializing the stack
-    const STACK_SIZE: usize = 1;
-    let mut stack = Stack::new(STACK_SIZE);
-    // initializing the heap
-    const HEAP_SIZE: usize = 10;
-    let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
-
-    sanity_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE);
-}
-
-#[test]
 fn mark_compact_sanity() {
     // initializing the stack
     const STACK_SIZE: usize = 1;
@@ -64,6 +52,18 @@ fn mark_compact_sanity() {
     // initializing the heap
     const HEAP_SIZE: usize = 5;
     let mut heap = MarkCompactHeap::init(HEAP_SIZE);
+
+    sanity_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE);
+}
+
+#[test]
+fn stop_copy_sanity() {
+    // initializing the stack
+    const STACK_SIZE: usize = 1;
+    let mut stack = Stack::new(STACK_SIZE);
+    // initializing the heap
+    const HEAP_SIZE: usize = 10;
+    let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
     sanity_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE);
 }

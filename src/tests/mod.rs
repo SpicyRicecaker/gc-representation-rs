@@ -1,6 +1,6 @@
 use crate::mark_compact::*;
-use crate::stop_copy::StopAndCopyHeap;
 use crate::shared::*;
+use crate::stop_copy::StopAndCopyHeap;
 // use crate::stop_copy::*;
 use std::collections::VecDeque;
 // use std::time::{Duration, Instant};

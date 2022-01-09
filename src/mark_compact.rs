@@ -162,7 +162,7 @@ impl MemoryManager for MarkCompactHeap {
         self.free = free;
         Ok(())
     }
-    
+
     #[inline(always)]
     fn get(&self, node_pointer: NodePointer) -> Option<&Node> {
         self.committed_memory.get(usize::from(node_pointer))
@@ -170,8 +170,7 @@ impl MemoryManager for MarkCompactHeap {
 
     #[inline(always)]
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node> {
-        self.committed_memory
-            .get_mut(usize::from(node_pointer))
+        self.committed_memory.get_mut(usize::from(node_pointer))
     }
 
     // breadh-first traversal of node, printing out

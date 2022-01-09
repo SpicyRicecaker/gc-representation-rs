@@ -21,6 +21,7 @@ fn actual_garbage_collection<T: MemoryManager>(
             heap.free(),
             heap_size
         );
+        assert_eq!(heap.free(), 1_000_000);
     }
 
     // the way that the tree was filled, nodes at the end of the heap are at the bottom of the tree
@@ -76,12 +77,19 @@ fn actual_garbage_collection<T: MemoryManager>(
             heap.free(),
             heap_size
         );
+        assert_eq!(heap.free(), 999938);
     }
 
     // allocate a bunch of garbage just to be sure
     for _ in 0..100 {
         heap.alloc(Node::default(), stack).unwrap();
     }
+    log::debug!(
+        "this is the size of the cleaned up heap: {}/{}",
+        heap.free(),
+        heap_size
+    );
+    assert_eq!(heap.free(), 999975);
 
     // top-level roots, every thing else on stack
     //              a    1       // stack
@@ -113,7 +121,7 @@ fn stop_and_copy_actual() {
     // initializing the stack
     let mut stack = Stack::new(STACK_SIZE);
     // initializing the heap
-    let mut heap = MarkCompactHeap::init(HEAP_SIZE);
+    let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
     actual_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE).unwrap();
 }
