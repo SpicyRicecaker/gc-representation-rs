@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use log::trace;
+
 use crate::shared::{MemoryManager, Node, NodePointer, Stack};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -26,13 +28,24 @@ impl StopAndCopyHeap {
             committed_memory.push(Node::default());
         }
         let extent = size / 2;
+        let from_space = 0;
+        // we're starting on the right side of the heap
+        let to_space = from_space + extent;
+        // the extent is just half of the total size of the heap
+        let free = to_space;
+        // the top, or maximum value we can hold before having to reallocate
+        // we precompute this to save calculations for the mutator
+        let top = to_space + extent;
+        // to_space also happens to be
+
+        // we call the active heap "to_space" for now, because during collect we'll flip it so it will actually become from_space
         Self {
-            from_space: 0,
-            to_space: extent,
-            top: 0,
-            free: 0,
-            committed_memory,
+            from_space,
+            to_space,
+            top,
+            free,
             extent,
+            committed_memory,
         }
     }
 }
@@ -42,12 +55,12 @@ impl MemoryManager for StopAndCopyHeap {
     // we can just add a new node and return its id
     fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
         // check if free is going over fromspace + tospace
-        if self.free >= self.from_space + self.extent {
+        if self.free >= self.top {
             log::trace!("exceeded from space, must run garbage collector");
             // we need to run gc
             self.collect(stack)?;
         }
-        if self.free >= self.committed_memory.len() {
+        if self.free >= self.top {
             return Err("gg collection didn't result in any amount of garbage collected".into());
         }
 
@@ -68,11 +81,17 @@ impl MemoryManager for StopAndCopyHeap {
             // literally std::mem swap them. They're both locations, neither is size
             // println!("{:?}", self.committed_memory);
             // println!("to space before swap {} {}", self.to_space, self.from_space);
-            std::mem::swap(&mut self.to_space, &mut self.from_space);
+            trace!("before swapping the heap, self.top (maxiumum of whatever is fromspace) is {}, self.from_space is {}, self.to_space is {}, and self.free is {}", self.top, self.from_space, self.to_space, self.free);
+            std::mem::swap(&mut self.from_space, &mut self.to_space);
+            // set free to be at the bot of the new to_space
+            self.free = self.to_space;
+            // set top to be to_space plus the extent
+            self.top = self.to_space + self.extent;
+
             // println!("to space after swap {} {}", self.to_space, self.from_space);
             // set our free pointer to the new space
-            self.free = self.to_space;
-            self.top = self.to_space;
+            // self.free = self.to_space;
+            trace!("after swapping the heap, self.top (maxiumum of whatever is fromspace) is {}, self.from_space is {}, self.to_space is {}, and self.free is {}", self.top, self.from_space, self.to_space, self.free);
         }
         // the scan also starts from the beginning of the to_space
         let mut scan = self.free;
@@ -112,12 +131,8 @@ impl MemoryManager for StopAndCopyHeap {
                     // set the reference to whatever the forwarding address stored inside the reference is, or copy it
                     //
                     // TL;DR the reference should now be pointing to copied objects in the tospace no matter what
-                    //
-                    // I don't know how I fked the api up this bad to make this function look like this jargon but yea it happens
-                    self.get_mut(self.get(scan_node_pointer).unwrap().children[i])
-                        .unwrap()
-                        .forwarding_address =
-                        Some(self.get(scan_node_pointer).unwrap().children[i]);
+                    self.get_mut(scan_node_pointer).unwrap().children[i] =
+                        self.copy(self.get(scan_node_pointer).unwrap().children[i])?;
                     // the references get added to the worklist automatically
                 }
                 // don't forget to bump the scan pointer

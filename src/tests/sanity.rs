@@ -27,7 +27,7 @@ fn sanity_garbage_collection<T: MemoryManager>(
     // which should free up *3* slots after garbage collection
     log::trace!("now removing children of one node");
 
-    heap.get_mut(child_node_pointer).unwrap().children.remove(0);
+    heap.get_mut(stack.roots[0].children[0]).unwrap().children.remove(0);
 
     log::trace!("{}", stack.dump_all(heap).unwrap());
 
@@ -57,7 +57,8 @@ fn mark_compact_sanity() {
 }
 
 #[test]
-fn stop_copy_sanity() {
+fn stop_and_copy_sanity() {
+    init_log();
     // initializing the stack
     const STACK_SIZE: usize = 1;
     let mut stack = Stack::new(STACK_SIZE);
@@ -65,5 +66,5 @@ fn stop_copy_sanity() {
     const HEAP_SIZE: usize = 10;
     let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
-    sanity_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE);
+    sanity_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE / 2);
 }
