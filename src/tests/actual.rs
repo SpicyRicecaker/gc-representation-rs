@@ -123,5 +123,5 @@ fn stop_and_copy_actual() {
     // initializing the heap
     let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
-    actual_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE).unwrap();
+    actual_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE / 2).unwrap();
 }

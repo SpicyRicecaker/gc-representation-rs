@@ -28,9 +28,10 @@ impl StopAndCopyHeap {
             committed_memory.push(Node::default());
         }
         let extent = size / 2;
-        let from_space = 0;
-        // we're starting on the right side of the heap
-        let to_space = from_space + extent;
+        let from_space = extent;
+        // TODO *LEFT IS REQUIRED FOR TESTS RN, SHOULD EXPOSE A PUBLIC API*
+        // we're starting on the left side of the heap
+        let to_space = 0;
         // the extent is just half of the total size of the heap
         let free = to_space;
         // the top, or maximum value we can hold before having to reallocate
@@ -174,7 +175,8 @@ impl MemoryManager for StopAndCopyHeap {
     }
 
     fn free(&self) -> usize {
-        self.free
+        // `free` on stop-and-copy should be subtracted by to space
+        self.free - self.to_space
     }
 }
 
