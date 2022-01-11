@@ -1,0 +1,74 @@
+% Font size, paper type
+\documentclass[12pt]{article}
+% Aesthetic margins
+\usepackage[margin=1in]{geometry}
+% Core math packages,
+% Mathtools loads amsmath, and amsmath gives basic math symbs
+% Amsfonts & amssymb are misc. symbols you might need
+\usepackage{mathtools, amsfonts, amssymb}
+% easy urls, hyphens option allows word-break of urls
+\usepackage[hyphens]{url}
+% Links in a pdf
+\usepackage{hyperref}
+% Hex values for colors; custom colors
+\usepackage{xcolor}
+% Use in pictures, graphs, and figures
+\usepackage{graphicx}
+% Header package
+\usepackage{fancyhdr}
+% Underlining with line breaks
+\usepackage{ulem}
+% Adjust accordingly given warning messages
+\setlength{\headheight}{15pt}
+% So we can more easily format text with pictures
+\usepackage{float}
+% Images and drawing graphs
+\usepackage{tikz}
+% Something about bits and stuff
+\usepackage[T1]{fontenc}
+% Set the incoding to unicode instead of ascii
+\usepackage[utf8]{inputenc}
+% Set the font to arial
+% \usepackage{fontspec}
+% \usepackage{mathspec}
+% \setmainfont{Arial}
+% \setmathrm{Arial}
+% \setmathfont(Digits,Latin){Arial}
+% Defines stuff about tables
+\usepackage{tabularx}
+% Similar to `lorem*[n]` in emmet
+\usepackage{lipsum}
+% Spits columns into two, the sane way
+\usepackage{paracol}
+% Layout of two columns
+\usepackage{multicol}
+% Removes automatic indent at the start of a paragraph
+\usepackage{indentfirst} 
+% Modularity! Includes other .tex files, precompiled
+% Use \subfile{path_of_doc} to include other filesr
+\usepackage{subfiles}
+% use natbib for custom in-text citations (e.g. author, n.d.)
+% \usepackage{natbib}
+\bibliographystyle{plain}
+% code blocks
+\usepackage{minted}
+
+% Sets footer
+\pagestyle{fancy}
+% Removes default footer style
+\fancyhf{}
+
+\rhead{\thepage{}}
+
+% Makes links look more appealing
+\hypersetup{ 
+colorlinks=true,
+% linkcolor=blue,
+citecolor=blue,
+% filecolor=magenta,
+urlcolor=blue,
+}
+
+\begin{document}
+\subfile{body}
+\end{document}

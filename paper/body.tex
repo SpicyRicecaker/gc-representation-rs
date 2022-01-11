@@ -1,0 +1,224 @@
+\documentclass[index]{subfiles}
+
+\begin{document}
+\title{Investigating the efficiency of Cheney stop-and-copy and LISP 2 style mark-compact garbage collection algorithms}
+\date{}
+\author{}
+\maketitle
+
+\section{Research Question}
+
+How does a Cheney stop-and-copy algorithm compare to a LISP 2 style mark-compact garbage collection algorithm in the context of a programming language?
+
+\section{Introduction}
+
+Garbage collectors, and the algorithms they use, are incredibly widespread in just about any application in modern day.
+
+Higher level programming languages are a staple in the modern day. Javascript is the sole programming language of the web, and drives the functionality of all webpages. Python, the most popular programming language of today, still increasing in popularity over time and a language for first learners, Java, a still very popular programming language encodes Minecraft, one of the most popular games of the world, played by millions, and is used in tons of server-side applications worldwide.
+
+The element that these programming languages all have in common is that they are interpreted languages, and they automatically manage memory, by using garbage collectors
+
+It thus follows that the algorithms behind garbage collection and their relative efficiencies are ever more important to consider, now that more interpreted languages are being run on more and more devices over time. Some recent studies on this subject have explored the power usages between different languages running the same program (Cassel), comparing interpreted languages such as Java and Python with manually managed languages such as C++ and Rust, however, the results didn't specifically test garbage collection algorithms specifically, and as each language is implemented with its own thousands of design decisions, we can hardly attribute the differences between languages simply because they aware on garbage collectors
+
+Other contemporary research on the subject has become increasingly complex, factoring in new algorithms, however, many assume the basic algorithms as known information, and haven't tested simple algorithms on modern hardware. This paper aims to shed light on the essential component of higher level languages that many programmers tend to look over, presenting information in an easily digestible way, as well as applying that knowledge practically by implementing a simple stop-and-copy algorithm and mark-sweep algorithm in the Java compiler itself, and comparing the performance of the two in this controlled environment.
+
+\section{Background}
+
+Before one can dive into the algorithms of garbage collection, first the concepts behind garbage must be understood
+
+Simply put, every computer program manipulates some data, which we call memory.
+There are two places where memory is allocated: the stack and the heap. The stack is static, meaning that it can't be increased dynamically while the program is running, while the heap isn't, it can be changed during runtime. In a game, if enemies were to be spawned, then allocation of memory for the enemy would have to be stored on the heap.
+
+But say that the enemy dies, and we no longer need it anymore, the enemy disappears from the screen, and we don't have a reference to the enemy anymore in our current code. However, in the case of garbage-collected languages, the enemy remains in the memory. This is ``dead'' memory, otherwise known as garbage.
+
+There are several ways to manage memory. One is by manually allocating and deallocating: the programmer specifies exactly how much memory is needed at a specific time, and decides when something should be deallocated. In lower-level languages, this is normal. However, manual allocation often requires a lot of experience to learn, and even with it, requires much more time to think about and write a program. It could also easily result in many types of bugs. (Byers, Berger)
+
+Hence, to alleviate the burden of having to keep track of manual memory management, automatic memory management was invented. There are many different ways to automatically manage memory. The only types of garbage collectors this paper is concerned with are tracing garbage collectors, which, as their name suggests, directly analyzes objects to see if they are ``alive'' (used by the program) or ``dead'' (not in use any longer). In other words, tracing garbage collectors specifically determine if an object is accessible (garbage) or not by traversing some kind of tree. (Jones)
+
+The main concept of garbage collection, simple: whenever we want to create a new object, we call `allocate()`, calculating the new space on the heap. But if the heap is full, or if we wish to collect the garbage at any time, then we call `collect()` (Garbage Collection Handbook), which as the name suggests, makes the bulk of the garbage collector.
+
+\section{LISP 2 Sliding Mark-Compact Algorithm}
+
+One very popular and easy to implement type of tracing garbage collector is the LISP-2 style mark-compact garbage collection algorithm.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/mark-compact-overview.png}
+    \caption{Basic overview of mark-compact algorithm}
+\end{figure}
+
+The `collect()` function of this mark-compact algorithm can be broken down into two stages: the `mark()` stage, where we find out which objects are ``living'' and the `compact()` stage, where we perform a series of computations to ``slide'' the living objects down into one end, compacting the heap in the process and freeing up space.
+
+\subsection{The Marking Stage}
+
+To determine which objects are alive and dead, we attempt to traverse the entire heap. We start from the root nodes, where the mutator can directly affect the values of the heap. Then we look at the objects that they reference. Accessible objects are objects that can eventually be reached by reference from the roots. We could use either breadth-first, or depth-first traversal to traverse the heap depending on the implementation, and  objects that are then found to be inaccessible (because they are unmarked) are defined as 'garbage', and can be removed in the next step, compaction.
+
+
+\begin{minted}[linenos, breaklines]{rust}
+// create marking bitmap using breadth-first traversal of the tree
+let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
+{
+    // first create a worklist, which is going to be a queue, since we're doing breadth-first traversal
+    let mut worklist: VecDeque<NodePointer> = VecDeque::new();
+
+    // populate the worklist with children from the reachable stack first
+    for root in &stack.roots {
+        for child in &root.children {
+            worklist.push_back(*child);
+        }
+    }
+    // then we just keep on taking from the worklist until it's empty
+    while let Some(node) = worklist.pop_front() {
+        // if the node isn't already marked
+        if !marked_node_pointers[usize::from(node)] {
+            // we mark it because it means it's accessible
+            marked_node_pointers.set(usize::from(node), true);
+            // then add the rest of its children to the back of the queue
+            for child_node_pointer in &self.get(node).unwrap().children {
+                worklist.push_back(*child_node_pointer);
+            }
+        }
+    }
+}
+// now all our reachable objects should be marked, everything not in the list is garbo
+\end{minted}
+
+As for storing whether an object is marked with a starting bit, a rather expensive but easy to implement option is to use a bitmap (an array of bits, basically) where each index corresponds to each object in the heap, which is marked 1 or 0 to show that it is alive (1) or dead (0) (Berger, Byers).
+
+\subsection{Compact Stage}
+
+The compaction stage of the mark-compact algorithm can be broken down into three parts, and in each part, the heap is traversed in its entirety. The first stage is to calculate the location of where the living object will slide down after copying. We do this by initializing a `free` pointer starting at the very bottom of the heap, and set the `forwardingAddress` of the living marked object in question to the free pointer, then bumping its size up.
+
+\begin{minted}[linenos, breaklines]{rust}
+// free starts at 0, the beginning of the point which we wish to compact to
+let mut free = 0;
+// compact occurs next
+{
+    // the first step is to calculate new locations of all objects
+
+    // we iterate over all objects in the heap TODO vec of nodes seems really inefficient
+    // if it is marked,
+    iterator.clone().try_for_each(|(idx, _)| -> Result<()> {
+        let mut marked_node = self.get_mut(NodePointer::from(idx)).unwrap();
+        // set its forwarding address equal to free
+        marked_node.forwarding_address = Some(NodePointer::from(free));
+        // then bump free
+        free += 1;
+        if free > self.committed_memory.len() {
+            Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into())
+        } else {
+            Ok(())
+        }
+    })?;
+}
+\end{minted}
+
+The second stage of garbage collection is to update the references of each marked living object to point to the new `forwardingAddress` of where they'll eventually be moved. We do this by traversing the heap for a 2nd time, then checking the reference of each object, retrieving the `forwardingAddress` and setting that as the new reference on the object.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/update-references.png}
+    \caption{Updating references in the compact step of mark compact, visualized.}
+\end{figure}
+
+We know where the objects should and will point, because in the previous step we stored them in the objects `forwardingAddress` field.
+
+Finally, we can actually move the objects over to where their `forwardingAddress` points to
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/actually-move.png}
+    \caption{Actually moving objects, the "compact step" in the compact step of mark compact, visualized.}
+\end{figure}
+
+We do this by traversing the heap a third time, then just doing some `mem::swap` calls between the object's pointer and their forwarding address. It's important to note here, that the sliding mark-compaction algorithm maintains the order of which the objects were on in the original heap, as well as moves objects more closely together in memory, hence 'compacted.'
+
+The order is important in the comparison between mark-compact and stop-copy garbage collection algorithms, because as we'll soon see, LISP-2 style stop-copy collectors do not preserve the order of objects in memory.
+
+In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware (Code Project, RCL\_SPD). These are stored in tables, and there is a  `page` storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
+
+\section{Cheney's Stop-and-Copy Algorithm}
+
+The second type of garbage collector that is of relevance to this paper is the stop-and-copy algorithm, which uses double the memory of the mark-compact compact algorithm, but is able to compress objects without walking them multiple times.
+
+When initializing the heap using this algorithm,  the initial contiguous heap is split into two sections, a from-space and a to-space.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/split-heap-diagram.png}
+    \caption{Picture of what the heap looks like for stop and copy}
+\end{figure}
+
+Like other garbage collectors, on every allocation it asks if the heap has enough memory
+
+(TODO code here)
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/allocation.png}
+    \caption{What checking for allocations looks like.}
+\end{figure}
+
+In this case, because the heap is split in half, we check that the `free` is not greater than the end of the heap but rather that it is not greater than half of the size of the heap. Once the heap does end up filling up, we can no longer allocate a new object on the heap and thus must call the `collect()` function of the stop-and-copy garbage collection algorithm.
+
+\subsection{Cheney's Algorithm}
+
+Right as we jump into the collect function, we flip the `fromSpace` with the `toSpace`.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/flipping.png}
+    \caption{flipping}
+\end{figure}
+
+Then we follow that by moving the initial nodes accessible by the global mutator to space, with their original references in the from-space still pointing towards the old references. We update the `forwardingAddress` of their old location on fromSpace to point to their new location on toSpace.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/visualization-of-worklist.png}
+    \caption{The algorithm for stop and compact. Unlike mark compact, instead of traversing the heap 3 times, it only traverses the heap once.}
+\end{figure}
+
+Now, we don't even need a worklist! Instead, we just repeatedly iterate over the objects in `toSpace`, until we reach the end of all the objects in `toSpace`. For every object that we then encounter (including the roots that we just moved), we find their references, move them over to `toSpace` if we haven't already, and then update the references to point to `toSpace`. (If their references have already been moved, then we can just use their `forwardingAddress` that we updated on the `fromSpace` to point to the right location).
+
+Upon reaching the end of the `toSpace`, garbage collection is already done! At this point the from-space is basically ignored, and the to-space becomes the effective heap, until the next cycle of garbage collection occurs.
+
+However, despite the fact that Cheney's stop-and-copy algorithm has much fewer steps than the mark-compact garbage collector, it has several downsides. Apart from the most obvious thing being the heap split in half, it's important to note that the way the worklist is traversed in this algorithm, it's effectively breadth-first by reference. Therefore, when objects are moved, their original order is not preserved, unlike with the mark-compact garbage collector. This could negatively affect program performance, because parents have the possibility of being separated from their children, resulting in large differences in locality despite the heap being compacted.
+
+It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large  surviving objects multiple times will inevitably lead to poor performance (Garbage Collection Handbook).
+
+Stop-and-copy garbage collection actually moves more than mark-compact garbage collection, because there isn't the possibility of objects staying in place and already being compacted. , but on the flipside, instead of having to traverse the heap 3 times to achieve heap compaction, the heap is effectively only traversed one time in one fell swoop
+
+And while mark-and-copy garbage collection is using double the memory that mark-compact is, it is still very elegant how a worklist or queue is not needed to  get through marking, and neither is a marking bitmap. By traversing the heap 3 times less, one might infer that for large heaps, the semi-space algorithm would outperform the mark-compact garbage collector algorithm.
+
+\section{Methodology}
+
+because the key points that we are unsure about are the locality benefits of the mark-and-compact sliding garbage collector vs. the LISP 2 style stop-and-copy garbage collector, the benchmarks are focused on measuring the performance differences during collection (how long it takes to clean up the garbage during an allocation) as well as the *runtime* performance, such as accessing the data structure and its values during a traversal of the tree
+
+What is the mutator again?
+Revise images
+What is the l2 cache?
+~50 mb cache on the CPU responsible for quickly accessing data, is orders of magnitude faster than RAM or harddrive?
+When does it get proced when...
+Bugs: https://github.com/SpicyRicecaker/gc-representation-rs
+
+\section{Works Cited}
+
+% TODO cite these
+
+% Works Cited
+% Kennke, Roman. ``Build Your Own GC with OpenJDK in 20 Minutes - YouTube.'' YouTube, YouTube, 11 Feb. 2019, https://www.youtube.com/watch?v=ko39IWFam5g.
+% Sen, Gaurav. ``Garbage Collection Algorithms: Mark Sweep, Generation Hypothesis and JIT Code Injection.'' YouTube, YouTube, 15 Dec. 2020, https://www.youtube.com/watch?v=ZhbIReLe-r8.
+% ``GCQ FAQ.'' The Invincible Electric Calculator Company, The Invincible Electric Calculator Company, https://www.iecc.com/gclist/GC-faq.html.
+% Nguyen, Donald. ``Generation Scavenging: A Non-Disruptive High-Performance Storage Reclamation Algorithm.'' The University of Texas at Austin, The University of Texas at Austin, 9 Feb. 2009, https://www.cs.utexas.edu/users/mckinley/395Tmm/talks/Feb-9-Ungar.pdf.
+% Byers, Rick. ``Garbage Collection Algorithms.'' The University of Washington, The University of Washington, 2007, https://courses.cs.washington.edu/courses/csep521/07wi/prj/rick.pdf.
+% Berger, Emery, and Bruno Silva. ``Garbage Collection.'' The University of Massachusetts Amherst, The University of Massachusetts Amherst, 2009, https://people.cs.umass.edu/~emery/classes/cmpsci377/current/notes/lecture_21_gc.pdf.
+% Cassel, David. ``Which Programming Languages Use the Least Electricity?'' The New Stack, The New Stack, 18 May 2018, https://thenewstack.io/which-programming-languages-use-the-least-electricity.
+% Jones, Richard. The Garbage Collection Handbook: Art Of Automatic Memory Management. CRC Press, 2012.
+% Nystrom, Robert. ``Garbage Collection.'' Crafting Interpreters, Genever Benning, Daryaganj Delhi, 2021, pp. 500–525.
+
+\bibliography{citations.bib}
+
+\end{document}
+
+
