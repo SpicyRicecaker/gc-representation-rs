@@ -22,6 +22,18 @@ It thus follows that the algorithms behind garbage collection and their relative
 
 Other contemporary research on the subject has become increasingly complex, factoring in new algorithms, however, many assume the basic algorithms as known information, and haven't tested simple algorithms on modern hardware. This paper aims to shed light on the essential component of higher level languages that many programmers tend to look over, presenting information in an easily digestible way, as well as applying that knowledge practically by implementing a simple stop-and-copy algorithm and mark-sweep algorithm in the Java compiler itself, and comparing the performance of the two in this controlled environment.
 
+\subsection{Methodology}
+
+I will first do background research on how the two algorithms are implemented, while attempting to create my own abstractions of the two algorithms in the Rust programming language. 
+
+I will then do research on the software and hardware factors in modern computers that garbage collection could have an effect on, including, but not limited to memory layout and algorithms that access the memory.
+
+I will then consult 3 major papers that have compared the performances of these algorithms with others in the past. 
+
+I will then compare these views and add my own hypothesis on how the performance of the two algorithms might differ.
+
+Finally, I will test both the collection performance of each algorithm (how long it takes to clean up the garbage) as well as the runtime performance of each algorithm, (such as accessing the data structure and its values during a traversal of the memory) using two separate tests.
+
 \section{Background}
 
 Before one can dive into the algorithms of garbage collection, first the concepts behind garbage must be understood
@@ -193,7 +205,6 @@ And while mark-and-copy garbage collection is using double the memory that mark-
 
 \section{Methodology}
 
-because the key points that we are unsure about are the locality benefits of the mark-and-compact sliding garbage collector vs. the LISP 2 style stop-and-copy garbage collector, the benchmarks are focused on measuring the performance differences during collection (how long it takes to clean up the garbage during an allocation) as well as the *runtime* performance, such as accessing the data structure and its values during a traversal of the tree
 
 What is the mutator again?
 Revise images
