@@ -59,7 +59,8 @@ impl MemoryManager for MarkCompactHeap {
         // we want to mark all nodes first
 
         // create marking bitmap using breadth-first traversal of the tree
-        let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
+        let mut marked_node_pointers: BitVec =
+            (0..self.committed_memory.len()).map(|_| false).collect();
         {
             // first create a worklist, which is going to be a queue, since we're doing breadth-first traversal
             let mut worklist: VecDeque<NodePointer> = VecDeque::new();
