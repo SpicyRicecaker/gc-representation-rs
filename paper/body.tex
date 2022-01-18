@@ -1,14 +1,14 @@
 \documentclass[index]{subfiles}
 
 \begin{document}
-\title{Investigating the efficiency of Cheney stop-and-copy and LISP2 style mark-compact garbage collection algorithms}
+\title{Investigating the efficiency of Cheney stop-and-copy and LISP 2 style mark-compact garbage collection algorithms}
 \date{}
 \author{}
 \maketitle
 
 \section{Research Question}
 
-How does a Cheney stop-and-copy algorithm compare to a LISP2 mark-compact garbage collection algorithm in the context of a programming language? \cite{build_your_own_openjdk_gc}
+How does a Cheney stop-and-copy algorithm compare to a LISP 2 mark-compact garbage collection algorithm in the context of a programming language? \cite{build_your_own_openjdk_gc}
 
 \section{Introduction}
 
@@ -112,9 +112,9 @@ Hence, to alleviate the burden of having to keep track of manual memory manageme
 
 The main concept of garbage collection, simple: whenever we want to create a new object, we call \verb+allocate()+, and calculate the new free space on the heap. But if the heap is full, or if we wish to collect the garbage at any time, then we call \verb+collect()+ \cite{gc_handbook}, which as the name suggests, makes the bulk of the garbage collector.
 
-\section{LISP2 Sliding Mark-Compact Algorithm}
+\section{LISP 2 Sliding Mark-Compact Algorithm}
 
-One very popular and easy to implement type of tracing garbage collector is the LISP-2 style mark-compact garbage collection algorithm.
+One very popular and easy to implement type of tracing garbage collector is the LISP 2 style mark-compact garbage collection algorithm.
 
 \begin{figure}[H]
     \centering
@@ -207,15 +207,17 @@ Finally, we can actually move the objects over to where their \verb+forwarding_a
 
 We do this by traversing the heap a third time, then just doing some \mintinline{rust}{std::mem::swap} calls between the object's pointer and their forwarding address. It's important to note here, that the sliding mark-compaction algorithm maintains the order of which the objects were on in the original heap, as well as moves objects more closely together in memory, hence 'compacted.'
 
-The order is important in the comparison between mark-compact and stop-copy garbage collection algorithms, because as we'll soon see, LISP-2 style stop-copy collectors do not preserve the order of objects in memory.
+The order is important in the comparison between mark-compact and stop-copy garbage collection algorithms, because as we'll soon see, LISP 2 style stop-copy collectors do not preserve the order of objects in memory.
 
-In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware \cite{code_project}. These are stored in tables, and there is a  `page` storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
+\subsubsection{Side note on page}
+
+In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware \cite{code_project}. These are stored in tables, and there is a \verb+page+ storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
 
 \section{Cheney's Stop-and-Copy Algorithm}
 
 The second type of garbage collector that is of relevance to this paper is the stop-and-copy algorithm, which uses double the memory of the mark-compact compact algorithm, but is able to compress objects without walking them multiple times.
 
-When initializing the heap using this algorithm,  the initial contiguous heap is split into two sections, a from-space and a to-space.
+When initializing the heap using this algorithm, the initial contiguous heap is split into two sections, a \verb+from_space+ and a \verb+to_space+.
 
 \begin{figure}[H]
     \centering
@@ -225,19 +227,54 @@ When initializing the heap using this algorithm,  the initial contiguous heap is
 
 Like other garbage collectors, on every allocation it asks if the heap has enough memory
 
-(TODO code here)
-
 \begin{figure}[H]
     \centering
     \includegraphics[scale=0.3]{pics/allocation.png}
     \caption{What checking for allocations looks like.}
 \end{figure}
 
-In this case, because the heap is split in half, we check that the `free` is not greater than the end of the heap but rather that it is not greater than half of the size of the heap. Once the heap does end up filling up, we can no longer allocate a new object on the heap and thus must call the `collect()` function of the stop-and-copy garbage collection algorithm.
+\begin{minted}[linenos, breaklines]{rust}
+// allocates a new node
+// we can just add a new node and return its id
+fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
+    // check if free is going over fromspace + tospace
+    if self.free >= self.top {
+        log::trace!("exceeded from space, must run garbage collector");
+        // we need to run gc
+        self.collect(stack)?;
+    }
+    if self.free >= self.top {
+        return Err("gg collection didn't result in any amount of garbage collected".into());
+    }
+
+    // set the node id to where the top of the heap is
+    let node_pointer = NodePointer::from(self.free);
+    // add it to the heap
+    self.committed_memory[usize::from(node_pointer)] = node;
+    // bump the free pointer
+    self.free += 1;
+
+    Ok(node_pointer)
+}
+\end{minted}
+
+In this case, because the heap is split in half, we check that the \verb+free+ is not greater than the end of the heap but rather that it is not greater than half of the size of the heap. Once the heap does end up filling up, we can no longer allocate a new object on the heap and thus must call the \verb+collect()+ function of the stop-and-copy garbage collection algorithm.
 
 \subsection{Cheney's Algorithm}
 
-Right as we jump into the collect function, we flip the `fromSpace` with the `toSpace`.
+Right as we jump into the collect function, we flip the \verb+from_space+ with \verb+`to_space`+.
+
+
+\begin{minted}[linenos, breaklines]{rust}
+    // first we swap from space with tospace
+{
+    std::mem::swap(&mut self.from_space, &mut self.to_space);
+    // set free to be at the bot of the new to_space
+    self.free = self.to_space;
+    // set top to be to_space plus the extent
+    self.top = self.to_space + self.extent;
+}
+\end{minted}
 
 \begin{figure}[H]
     \centering
@@ -245,7 +282,52 @@ Right as we jump into the collect function, we flip the `fromSpace` with the `to
     \caption{flipping}
 \end{figure}
 
-Then we follow that by moving the initial nodes accessible by the global mutator to space, with their original references in the from-space still pointing towards the old references. We update the `forwardingAddress` of their old location on fromSpace to point to their new location on toSpace.
+Then we follow that by moving the initial nodes accessible by the global mutator to space, with their original references in the \verb+from_space+ still pointing towards the old references.
+
+\begin{minted}[linenos, breaklines]{rust}
+// next we populate the initial "working list" with roots
+{
+    // copy the roots over
+    // this technically adds them to the worklist
+    for root in &mut stack.roots {
+        for child in &mut root.children {
+            // make sure to update the root refs to point in the right place
+            *child = self.copy(*child)?;
+        }
+    }
+}
+\end{minted}
+
+We update the \verb+forwarding_address+ of their old location on \verb+from_space+ to point to their new location on \verb+to_space+, via the \verb+copy+ function.
+
+\begin{minted}[linenos, breaklines]{rust}
+/// copy function
+pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
+    // if object has a forwarding address, it means that we've already moved it over to to space, so we can just give it its reference
+    if let Some(forwarding_address) = self.get(node_pointer).unwrap().forwarding_address {
+        Ok(forwarding_address)
+    } else {
+        let new_node_pointer = NodePointer::from(self.free);
+        // otherwise, the new nodepointer value of this object will be whatever free there is
+        // now use .swap() to move nodepointer current location to its new location free
+        self.committed_memory
+            .swap(usize::from(node_pointer), usize::from(new_node_pointer));
+
+        // and remember to set the forwarding address of the moved nodepointer to none
+        self.get_mut(new_node_pointer).unwrap().forwarding_address = None;
+
+        // now update the old forwarding address to include itself
+        // keep in mind that this object in to space is complete garbage except for the forwarding address part
+        self.get_mut(node_pointer).unwrap().forwarding_address = Some(new_node_pointer);
+
+        // also remember to bump free
+        self.free += 1;
+
+        // finally we can return the new_node_pointer
+        Ok(new_node_pointer)
+    }
+}
+\end{minted}
 
 \begin{figure}[H]
     \centering
@@ -253,20 +335,47 @@ Then we follow that by moving the initial nodes accessible by the global mutator
     \caption{The algorithm for stop and compact. Unlike mark compact, instead of traversing the heap 3 times, it only traverses the heap once.}
 \end{figure}
 
-Now, we don't even need a worklist! Instead, we just repeatedly iterate over the objects in `toSpace`, until we reach the end of all the objects in `toSpace`. For every object that we then encounter (including the roots that we just moved), we find their references, move them over to `toSpace` if we haven't already, and then update the references to point to `toSpace`. (If their references have already been moved, then we can just use their `forwardingAddress` that we updated on the `fromSpace` to point to the right location).
+Now, we don't even need a worklist! Instead, we just repeatedly iterate over the objects in \verb+to_space+, until we reach the end of all the objects in \verb+to_space+. For every object that we then encounter (including the roots that we just moved), we find their references, move them over to \verb+to_space+ if we haven't already, and then update the references to point to \verb+to_space+. (If their references have already been moved, then we can just use their \verb+forwarding_address+ that we updated on the \verb+from_space+ to point to the right location).
 
-Upon reaching the end of the `toSpace`, garbage collection is already done! At this point the from-space is basically ignored, and the to-space becomes the effective heap, until the next cycle of garbage collection occurs.
+\begin{minted}[linenos, breaklines]{rust}
+    // now we process all the references of the nodes in the worklist as well
+{
+    // you might be wondering...
+    // how do we do `for each node in worklist`?
+    //
+    // well, so long as the scan does not catch up to free
+    // that is, so as long as we have not processed every single "copied" oject on the heap, keep on going
+    while scan < self.free {
+        let scan_node_pointer = NodePointer::from(scan);
+        // get all references, or children of the object that was recently copied to tospace
+        //
+        //
+        //  ... to copy the references over,
+        for i in 0..self.get(scan_node_pointer).unwrap().children.len() {
+            // set the reference to whatever the forwarding address stored inside the reference is, or copy it
+            //
+            // TL;DR the reference should now be pointing to copied objects in the tospace no matter what
+            self.get_mut(scan_node_pointer).unwrap().children[i] =
+                self.copy(self.get(scan_node_pointer).unwrap().children[i])?;
+            // the references get added to the worklist automatically
+        }
+        // don't forget to bump the scan pointer
+        scan += 1;
+    }
+}
+\end{minted}
+
+Upon reaching the end of the \verb+to_space+, garbage collection is already done! At this point the from-space is basically ignored, and the \verb+to_space+ becomes the effective heap, until the next cycle of garbage collection occurs.
 
 However, despite the fact that Cheney's stop-and-copy algorithm has much fewer steps than the mark-compact garbage collector, it has several downsides. Apart from the most obvious thing being the heap split in half, it's important to note that the way the worklist is traversed in this algorithm, it's effectively breadth-first by reference. Therefore, when objects are moved, their original order is not preserved, unlike with the mark-compact garbage collector. This could negatively affect program performance, because parents have the possibility of being separated from their children, resulting in large differences in locality despite the heap being compacted.
 
-It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large  surviving objects multiple times will inevitably lead to poor performance (Garbage Collection Handbook).
+It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large surviving objects multiple times will inevitably lead to poor performance \cite[Chapter 4]{gc_handbook}.
 
-Stop-and-copy garbage collection actually moves more than mark-compact garbage collection, because there isn't the possibility of objects staying in place and already being compacted. , but on the flipside, instead of having to traverse the heap 3 times to achieve heap compaction, the heap is effectively only traversed one time in one fell swoop
+Stop-and-copy garbage collection actually moves more than mark-compact garbage collection, because there isn't the possibility of objects staying in place and already being compacted. But on the flipside, instead of having to traverse the heap 3 times to achieve heap compaction, the heap is effectively only traversed one time in one fell swoop.
 
 And while mark-and-copy garbage collection is using double the memory that mark-compact is, it is still very elegant how a worklist or queue is not needed to  get through marking, and neither is a marking bitmap. By traversing the heap 3 times less, one might infer that for large heaps, the semi-space algorithm would outperform the mark-compact garbage collector algorithm.
 
 \section{Methodology}
-
 
 What is the mutator again?
 Revise images
