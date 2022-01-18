@@ -1,14 +1,14 @@
 \documentclass[index]{subfiles}
 
 \begin{document}
-\title{Investigating the efficiency of Cheney stop-and-copy and LISP 2 style mark-compact garbage collection algorithms}
+\title{Investigating the efficiency of Cheney stop-and-copy and LISP2 style mark-compact garbage collection algorithms}
 \date{}
 \author{}
 \maketitle
 
 \section{Research Question}
 
-How does a Cheney stop-and-copy algorithm compare to a LISP 2 style mark-compact garbage collection algorithm in the context of a programming language? \cite{build_your_own_openjdk_gc}12
+How does a Cheney stop-and-copy algorithm compare to a LISP2 mark-compact garbage collection algorithm in the context of a programming language? \cite{build_your_own_openjdk_gc}
 
 \section{Introduction}
 
@@ -16,19 +16,21 @@ Garbage collectors, and the algorithms they use, are incredibly widespread in ju
 
 Higher level programming languages are a staple in the modern day. Javascript is the sole programming language of the web, and drives the functionality of all webpages. Python, the most popular programming language of today, still increasing in popularity over time and a language for first learners, Java, a still very popular programming language encodes Minecraft, one of the most popular games of the world, played by millions, and is used in tons of server-side applications worldwide.
 
-The element that these programming languages all have in common is that they are interpreted languages, and they automatically manage memory, by using garbage collectors
+The element that these programming languages all have in common is that they are interpreted languages, and they automatically manage memory, by using garbage collectors.
 
-It thus follows that the algorithms behind garbage collection and their relative efficiencies are ever more important to consider, now that more interpreted languages are being run on more and more devices over time. Some recent studies on this subject have explored the power usages between different languages running the same program (Cassel), comparing interpreted languages such as Java and Python with manually managed languages such as C++ and Rust, however, the results didn't specifically test garbage collection algorithms specifically, and as each language is implemented with its own thousands of design decisions, we can hardly attribute the differences between languages simply because they aware on garbage collectors
+It thus follows that the algorithms behind garbage collection and their relative efficiencies are ever more important to consider, now that more interpreted languages are being run on more and more devices over time. Some recent studies on this subject have explored the power usages between different languages running the same program \cite{programming_languages_electricity}, comparing interpreted languages such as Java and Python with manually managed languages such as C++ and Rust, however, the results didn't specifically test garbage collection algorithms specifically, and as each language implements its own unique garbage collection algorithm with its own unique design decisions among other things, it's hard to say if one base garbage collection algorithm is better than the other using these results alone.
 
-Other contemporary research on the subject has become increasingly complex, factoring in new algorithms, however, many assume the basic algorithms as known information, and haven't tested simple algorithms on modern hardware. This paper aims to shed light on the essential component of higher level languages that many programmers tend to look over, presenting information in an easily digestible way, as well as applying that knowledge practically by implementing a simple stop-and-copy algorithm and mark-sweep algorithm in the Java compiler itself, and comparing the performance of the two in this controlled environment.
+Other contemporary research on the subject has become increasingly complex, factoring in new algorithms, however, many assume the basic algorithms as known information, and haven't tested simple algorithms on modern hardware. This paper aims to shed light on the essential component of higher level languages that many programmers tend to look over, presenting information in an easily digestible way, as well as applying that knowledge practically by implementing a simple stop-and-copy and mark-compact garbage collection algorithm in the same programming language in an abstracted way, and comparing the performance of the two in this controlled environment.
 
 \subsection{Methodology}
 
-I will first do background research on how the two algorithms are implemented, while attempting to create my own abstractions of the two algorithms in the Rust programming language. 
+I will first do background research on basic terminology concerning memory management.
+
+Then I will research how the two garbage collection algorithms are implemented, while attempting to create my own abstractions of the two algorithms in the Rust programming language.
 
 I will then do research on the software and hardware factors in modern computers that garbage collection could have an effect on, including, but not limited to memory layout and algorithms that access the memory.
 
-I will then consult 3 major papers that have compared the performances of these algorithms with others in the past. 
+I will then consult 3 major papers that have compared the performances of these algorithms with others in the past.
 
 I will then compare these views and add my own hypothesis on how the performance of the two algorithms might differ.
 
@@ -36,20 +38,81 @@ Finally, I will test both the collection performance of each algorithm (how long
 
 \section{Background}
 
-Before one can dive into the algorithms of garbage collection, first the concepts behind garbage must be understood
+\subsection{The concepts of memory management (explained in the context of a game)}
 
-Simply put, every computer program manipulates some data, which we call memory.
-There are two places where memory is allocated: the stack and the heap. The stack is static, meaning that it can't be increased dynamically while the program is running, while the heap isn't, it can be changed during runtime. In a game, if enemies were to be spawned, then allocation of memory for the enemy would have to be stored on the heap.
+\begin{quote}
+    Imagine a game with multiple enemies. How do we store the enemies?
+\end{quote}
 
-But say that the enemy dies, and we no longer need it anymore, the enemy disappears from the screen, and we don't have a reference to the enemy anymore in our current code. However, in the case of garbage-collected languages, the enemy remains in the memory. This is ``dead'' memory, otherwise known as garbage.
+The above question basically defines memory managment.
 
-There are several ways to manage memory. One is by manually allocating and deallocating: the programmer specifies exactly how much memory is needed at a specific time, and decides when something should be deallocated. In lower-level languages, this is normal. However, manual allocation often requires a lot of experience to learn, and even with it, requires much more time to think about and write a program. It could also easily result in many types of bugs. (Byers, Berger)
+You might first think that a plain vector might take care of managing the enemies.
 
-Hence, to alleviate the burden of having to keep track of manual memory management, automatic memory management was invented. There are many different ways to automatically manage memory. The only types of garbage collectors this paper is concerned with are tracing garbage collectors, which, as their name suggests, directly analyzes objects to see if they are ``alive'' (used by the program) or ``dead'' (not in use any longer). In other words, tracing garbage collectors specifically determine if an object is accessible (garbage) or not by traversing some kind of tree. (Jones)
+\begin{minted}[breaklines]{rust}
+    enemies = [enemy1, enemy2, enemy3]
+\end{minted}
 
-The main concept of garbage collection, simple: whenever we want to create a new object, we call `allocate()`, calculating the new space on the heap. But if the heap is full, or if we wish to collect the garbage at any time, then we call `collect()` (Garbage Collection Handbook), which as the name suggests, makes the bulk of the garbage collector.
+Whenever you want to spawn an enemy, you \textit{allocate} it in the array
 
-\section{LISP 2 Sliding Mark-Compact Algorithm}
+\begin{minted}[breaklines]{rust}
+    enemies.push(enemy4)
+    // enemies = [enemy1, enemy2, enemy3, enemy4]
+\end{minted}
+
+And whenever you want to despawn an enemy, you deallocate it from the array
+
+\begin{minted}[breaklines]{rust}
+    enemies.remove(0)
+    // enemies = [enemy2, enemy3, enemy4]
+\end{minted}
+
+Simple enough, right?
+
+But we're using some rather high-level abstractions here like \verb+remove+ and \verb+push+.
+
+Imagine that the array you had was of a fixed length, and you couldn't push or pop from the array at will. Now how would you manage ``alive'' and ``dread'' enemies?
+
+In this array, you would have to keep track of where the next free space was.
+
+\begin{minted}[breaklines]{rust}
+    free = 0
+    enemies = [NULL, enemy2, enemy3]
+\end{minted}
+
+This simple action of keeping track of the free space, is where all the problems of memory management comes from.
+
+\subsection{In the context of computers}
+
+The data of all computer programs are stored in a place we call memory.
+
+Whenever we want to make room for new data, we must allocate memory to free space. And whenever we want to remove data, we must deallocate that memory, back into free space.
+
+In modern computers, there are two places where the program can allocate memory: the stack and the heap .
+
+In the stack, whenever we wish to allocate something, all we have to do is bump a pointer's memory address up to determine where our next boundary of free memory is \cite{the_rust_programming_language}. However, whenever one wishes to deallocate memory, they must do so from top to the bottom.
+
+Thus, the stack always consists of a block of contiguous used memory, and a block of contiguous free memory.
+
+\begin{minted}[breaklines]{rust}
+    free = 4
+    memory = [data1, data2, data3, NULL, NULL, NULL]
+\end{minted}
+
+However, most of the memory of programs aren't allocated linearly and deallocated in the exact opposite order.
+
+Thus, garbage collection is most concerned with the heap, which, on the other hand, can be accessed at random, and objects with dynamic sizes (that is, that is, sizes unknown at the time we compile our program) can be allocated on the heap. Deallocation of the heap may occur in a random order.
+
+However, the question then becomes, how do we keep track of which sections of the heap are ``free'' memory, and which sections are ``used'' memory on the heap? That's the essence of memory managment.
+
+\subsection{Memory Management Techniques}
+
+There are several ways to manage memory in a language. One is by manually allocating and deallocating: the programmer specifies exactly how much memory is needed at a specific time, and decides when something should be deallocated. In lower-level languages, this is normal. However, manual allocation often requires a lot of experience to learn, and even with it, requires much more time to think about and write a program. It could also easily result in many types of bugs, such as using memory that is already freed, freeing memory twice, and not freeing memory in the first place \cite[Chapter~1]{garbage_collection_overview_uw, gc_handbook}
+
+Hence, to alleviate the burden of having to keep track of manual memory management, many modern programming languages use automatic memory management. There are many different ways to automatically manage memory. The only types of garbage collectors this paper is concerned with are tracing garbage collectors, which, as their name suggests, directly check objects to determine if they are ``alive'' (used by the program) or ``dead'' (not in use any longer) \cite{a_unified_theory_of_garbage_collection}. In other words, tracing garbage collectors specifically determine if an object is accessible (garbage) or not by traversing some kind of tree \cite[Chapter~1]{gc_handbook}.
+
+The main concept of garbage collection, simple: whenever we want to create a new object, we call \verb+allocate()+, and calculate the new free space on the heap. But if the heap is full, or if we wish to collect the garbage at any time, then we call \verb+collect()+ \cite{gc_handbook}, which as the name suggests, makes the bulk of the garbage collector.
+
+\section{LISP2 Sliding Mark-Compact Algorithm}
 
 One very popular and easy to implement type of tracing garbage collector is the LISP-2 style mark-compact garbage collection algorithm.
 
@@ -59,12 +122,11 @@ One very popular and easy to implement type of tracing garbage collector is the 
     \caption{Basic overview of mark-compact algorithm}
 \end{figure}
 
-The `collect()` function of this mark-compact algorithm can be broken down into two stages: the `mark()` stage, where we find out which objects are ``living'' and the `compact()` stage, where we perform a series of computations to ``slide'' the living objects down into one end, compacting the heap in the process and freeing up space.
+The \verb+collect()+ function of this mark-compact algorithm can be broken down into two stages: the \verb+mark()+ stage, where we find out which objects are ``living'' and the \verb+compact()+ stage, where we perform a series of computations to ``slide'' the living objects down into one end, compacting the heap in the process and freeing up space \cite[Chapter~3]{gc_handbook}.
 
 \subsection{The Marking Stage}
 
-To determine which objects are alive and dead, we attempt to traverse the entire heap. We start from the root nodes, where the mutator can directly affect the values of the heap. Then we look at the objects that they reference. Accessible objects are objects that can eventually be reached by reference from the roots. We could use either breadth-first, or depth-first traversal to traverse the heap depending on the implementation, and  objects that are then found to be inaccessible (because they are unmarked) are defined as 'garbage', and can be removed in the next step, compaction.
-
+To determine which objects are alive and dead, we attempt to traverse the entire heap. We start from the root nodes, where the mutator can directly affect the values of the heap \cites[3.2~Marking]{redhat_openjdk}[Chapter~3]{gc_handbook}. Then we look at the objects that they reference. Accessible objects are objects that can eventually be reached by reference from the roots. We could use either breadth-first, or depth-first traversal to traverse the heap depending on the implementation, and  objects that are then found to be inaccessible (because they are unmarked) are defined as 'garbage', and can be removed in the next step, compaction.
 
 \begin{minted}[linenos, breaklines]{rust}
 // create marking bitmap using breadth-first traversal of the tree
@@ -95,11 +157,11 @@ let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
 // now all our reachable objects should be marked, everything not in the list is garbo
 \end{minted}
 
-As for storing whether an object is marked with a starting bit, a rather expensive but easy to implement option is to use a bitmap (an array of bits, basically) where each index corresponds to each object in the heap, which is marked 1 or 0 to show that it is alive (1) or dead (0) (Berger, Byers).
+As for storing whether an object is marked with a starting bit, a rather expensive but easy to implement option is to use a bitmap (an array of bits, basically) where each index corresponds to each object in the heap, which is marked 1 or 0 to show that it is alive (1) or dead (0) \cite[Chapter~3]{gc_handbook}.
 
 \subsection{Compact Stage}
 
-The compaction stage of the mark-compact algorithm can be broken down into three parts, and in each part, the heap is traversed in its entirety. The first stage is to calculate the location of where the living object will slide down after copying. We do this by initializing a `free` pointer starting at the very bottom of the heap, and set the `forwardingAddress` of the living marked object in question to the free pointer, then bumping its size up.
+The compaction stage of the mark-compact algorithm can be broken down into three parts, and in each part, the heap is traversed in its entirety. The first stage is to calculate the location of where the living object will slide down after copying. We do this by initializing a \verb+free+ pointer starting at the very bottom of the heap, and set the \verb+forwarding_address+ of the living marked object in question to the free pointer, then bumping its size up \cites[Chapter~3]{gc_handbook}[Sections~3.3-3.5]{redhat_openjdk}.
 
 \begin{minted}[linenos, breaklines]{rust}
 // free starts at 0, the beginning of the point which we wish to compact to
@@ -125,7 +187,7 @@ let mut free = 0;
 }
 \end{minted}
 
-The second stage of garbage collection is to update the references of each marked living object to point to the new `forwardingAddress` of where they'll eventually be moved. We do this by traversing the heap for a 2nd time, then checking the reference of each object, retrieving the `forwardingAddress` and setting that as the new reference on the object.
+The second stage of garbage collection is to update the references of each marked living object to point to the new \verb+forwarding_address+ of where they'll eventually be moved. We do this by traversing the heap for a 2nd time, then checking the reference of each object, retrieving the \verb+forwarding_address+ and setting that as the new reference on the object \cites[Chapter 3]{gc_handbook}[Sec. 3.4]{redhat_openjdk}.
 
 \begin{figure}[H]
     \centering
@@ -133,9 +195,9 @@ The second stage of garbage collection is to update the references of each marke
     \caption{Updating references in the compact step of mark compact, visualized.}
 \end{figure}
 
-We know where the objects should and will point, because in the previous step we stored them in the objects `forwardingAddress` field.
+We know where the objects should and will point, because in the previous step we stored them in the objects \verb+forwarding_address+ field.
 
-Finally, we can actually move the objects over to where their `forwardingAddress` points to
+Finally, we can actually move the objects over to where their \verb+forwarding_address+ points to
 
 \begin{figure}[H]
     \centering
@@ -143,11 +205,11 @@ Finally, we can actually move the objects over to where their `forwardingAddress
     \caption{Actually moving objects, the "compact step" in the compact step of mark compact, visualized.}
 \end{figure}
 
-We do this by traversing the heap a third time, then just doing some `mem::swap` calls between the object's pointer and their forwarding address. It's important to note here, that the sliding mark-compaction algorithm maintains the order of which the objects were on in the original heap, as well as moves objects more closely together in memory, hence 'compacted.'
+We do this by traversing the heap a third time, then just doing some \mintinline{rust}{std::mem::swap} calls between the object's pointer and their forwarding address. It's important to note here, that the sliding mark-compaction algorithm maintains the order of which the objects were on in the original heap, as well as moves objects more closely together in memory, hence 'compacted.'
 
 The order is important in the comparison between mark-compact and stop-copy garbage collection algorithms, because as we'll soon see, LISP-2 style stop-copy collectors do not preserve the order of objects in memory.
 
-In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware (Code Project, RCL\_SPD). These are stored in tables, and there is a  `page` storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
+In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware \cite{code_project}. These are stored in tables, and there is a  `page` storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
 
 \section{Cheney's Stop-and-Copy Algorithm}
 

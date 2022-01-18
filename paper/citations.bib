@@ -61,21 +61,73 @@
 }
 
 @book{gc_handbook,
-  title={The Garbage Collection Handbook: The Art of Automatic Memory Management},
-  author={Jones, R. and Hosking, A. and Moss, E.},
-  isbn={9781315388007},
-  series={Chapman \& Hall/CRC Applied Algorithms and Data Structures series},
-  url={https://books.google.com/books?id=kM6NDwAAQBAJ},
-  year={2016},
-  publisher={CRC Press}
+  title     = {The Garbage Collection Handbook: The Art of Automatic Memory Management},
+  author    = {Jones, R. and Hosking, A. and Moss, E.},
+  isbn      = {9781315388007},
+  series    = {Chapman \& Hall/CRC Applied Algorithms and Data Structures series},
+  url       = {https://books.google.com/books?id=kM6NDwAAQBAJ},
+  year      = {2016},
+  publisher = {CRC Press}
+}
+
+@inbook{gc_handbook_intro,
+  title     = {The Garbage Collection Handbook: The Art of Automatic Memory Management},
+  author    = {Jones, R. and Hosking, A. and Moss, E.},
+  isbn      = {9781315388007},
+  series    = {Chapman \& Hall/CRC Applied Algorithms and Data Structures series},
+  url       = {https://books.google.com/books?id=kM6NDwAAQBAJ},
+  year      = {2016},
+  pages          = {},
+  publisher = {CRC Press}
 }
 
 @inbook{nystrom,
-  title={Crafting Interpreters},
-  author={Nystrom, R.},
-  isbn={9780990582939},
-  url={https://books.google.com/books?id=ySOBzgEACAAJ},
-  year={2021},
-  publisher={Genever Benning},
-  pages = {500-525},
+  title     = {Crafting Interpreters},
+  author    = {Nystrom, R.},
+  isbn      = {9780990582939},
+  url       = {https://books.google.com/books?id=ySOBzgEACAAJ},
+  year      = {2021},
+  publisher = {Genever Benning},
+  pages     = {500-525}
 }
+
+@inbook{the_rust_programming_language,
+  author  = {Steve Klabnik and Carol Nichols},
+  title   = {The Rust Programming Language},
+  url     = {https://doc.rust-lang.org/book/ch04-01-what-is-ownership.html?highlight=stack#the-stack-and-the-heap},
+  chapter = {What is Ownership},
+  year    = {2022}
+}
+
+@online{a_unified_theory_of_garbage_collection,
+  title     = {A unified theory of garbage collection},
+  url       = {https://www.cs.cornell.edu/courses/cs6120/2019fa/blog/unified-theory-gc/},
+  publisher = {Cornell University},
+  author    = {Mark Anastos and Qian Huang},
+  day       = {8},
+  year      = {2019},
+  month     = {November},
+  note      = {Presents mathematical formulas for tracing and reference garbage collectors, as well as explains what tracing and reference garbage collectors are.}
+} 
+
+@online{redhat_openjdk,
+  title     = {Do It Yourself (OpenJDK) Garbage Collector},
+  url       = {https://shipilev.net/jvm/diy-gc/},
+  publisher = {Redhat},
+  author    = {Mark Anastos and Qian Huang},
+  day       = {25},
+  year      = {2020},
+  month     = {November},
+  note      = {References the fossdem vide of how to create your own openjdk thing}
+} 
+
+@online{code_project,
+  title     = {Allocating Memory on Linux and Windows},
+  url       = {https://www.codeproject.com/Articles/1255908/Allocating-Memory-on-Linux-and-Windows},
+  publisher = {CodeProject},
+  author    = {RCL{\_}SPD},
+  day       = {10},
+  year      = {2018},
+  month     = {August},
+  note      = {Tells about how virtual memory and physical memory are managed in operating systems. Talks about pages, page tables, and physical TLB buffers.}
+} 
