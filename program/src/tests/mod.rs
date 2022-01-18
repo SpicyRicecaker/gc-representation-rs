@@ -8,6 +8,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 mod actual;
 mod sanity;
+mod collection;
 
 pub fn init_log() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -63,44 +64,3 @@ pub fn seed_root<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<No
     stack.roots[0].children.push(node_pointer);
     Ok(node_pointer)
 }
-
-// #[test]
-// fn insane_mark_compact() {
-//     // we spawn a sht ton of garbage
-//     const STACK_SIZE: usize = 1;
-//     const HEAP_SIZE: usize = 40000;
-//     // initializing the stack
-//     let mut stack = Stack::new(STACK_SIZE);
-//     // initializing the heap
-//     let mut heap = MarkCompactHeap::init(HEAP_SIZE);
-
-//     dbg!("start");
-
-//     let start = Instant::now();
-
-//     for _ in 0..100_000_000 {
-//         heap.alloc(&mut stack).unwrap();
-//     }
-
-//     dbg!("done", start.elapsed());
-// }
-
-// #[test]
-// fn insane_stop_copy() {
-//     // we spawn a sht ton of garbage
-//     const STACK_SIZE: usize = 1;
-//     const HEAP_SIZE: usize = 80000;
-//     // initializing the stack
-//     let mut stack = Stack::new(STACK_SIZE);
-//     // initializing the heap
-//     let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
-
-//     dbg!("start");
-//     let start = Instant::now();
-
-//     for _ in 0..100_000_000 {
-//         heap.alloc(&mut stack).unwrap();
-//     }
-
-//     dbg!("done", start.elapsed());
-// }

@@ -27,7 +27,23 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"label": "rust: cargo run"
+			"label": "test all"
+		},
+		{
+			"type": "shell",
+			"command": "RUST_LOG=info cargo test --release collection -- --nocapture --test-threads=1",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"label": "PERFORMANCE actual"
+		},
+		{
+			"type": "shell",
+			"command": "RUST_LOG=info cargo test --release collection -- --nocapture --test-threads=1",
+			"problemMatcher": [
+				"$rustc"
+			],
+			"label": "PERFORMANCE actual mark"
 		}
 	]
 }

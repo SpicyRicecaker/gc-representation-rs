@@ -29,7 +29,6 @@ impl StopAndCopyHeap {
         }
         let extent = size / 2;
         let from_space = extent;
-        // TODO *LEFT IS REQUIRED FOR TESTS RN, SHOULD EXPOSE A PUBLIC API*
         // we're starting on the left side of the heap
         let to_space = 0;
         // the extent is just half of the total size of the heap
@@ -97,18 +96,13 @@ impl MemoryManager for StopAndCopyHeap {
         // the scan also starts from the beginning of the to_space
         let mut scan = self.free;
 
-        // dbg!(&self.committed_memory);
         // stack.dump_all(self)?;
-        // println!("SUCESSSCUESUCEUSCUESUCSEUCESUCSEUC");
         // next we populate the initial "working list" with roots
         {
             // copy the roots over
             // this technically adds them to the worklist
             for root in &mut stack.roots {
                 for child in &mut root.children {
-                    // println!("12312312312");
-                    // dbg!(*child);
-                    // dbg!("value of child", stapi::value(*child, self)?);
                     // make sure to update the root refs to point in the right place
                     *child = self.copy(*child)?;
                 }
@@ -147,12 +141,12 @@ impl MemoryManager for StopAndCopyHeap {
 
     #[inline(always)]
     fn get(&self, node_pointer: NodePointer) -> Option<&Node> {
-        self.committed_memory.get(usize::from(node_pointer))
+        self.committed_memory.get( usize::from(node_pointer))
     }
 
     #[inline(always)]
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node> {
-        self.committed_memory.get_mut(usize::from(node_pointer))
+        self.committed_memory.get_mut( usize::from(node_pointer))
     }
 
     // breadh-first traversal of node, printing out
@@ -181,7 +175,7 @@ impl MemoryManager for StopAndCopyHeap {
 }
 
 impl StopAndCopyHeap {
-    /// copy function
+    // copy function
     pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
         // if object has a forwarding address, it means that we've already moved it over to to space, so we can just give it its reference
         // dbg!(node_pointer, stapi::value(node_pointer, self)?);

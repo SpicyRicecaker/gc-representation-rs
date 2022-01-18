@@ -57,6 +57,11 @@ pub trait MemoryManager {
     // probably should use `GET_API` for a memory api
 }
 
+// pub trait PublicMemoryManager {
+//     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
+//     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
+// }
+
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NodePointer {
     idx: usize,
