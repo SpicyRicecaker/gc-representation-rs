@@ -12,13 +12,13 @@
 		{
 			"type": "shell",
 			"command": "flamegraph -o profiling/flamegraph.svg target/debug/gc-representation-rs",
-			"label": "flamegraph profile",
+			"label": "flamegraph: profile",
 			"problemMatcher": []
 		},
 		{
 			"type": "shell",
 			"command": "flamegraph -o profiling/flamegraph.svg cargo test insane -- --nocapture --test-threads=1",
-			"label": "TEST flamegraph profile",
+			"label": "flamegraph [test]: profile",
 			"problemMatcher": []
 		},
 		{
@@ -27,7 +27,7 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"label": "test all"
+			"label": "rust: cargo test (with all logs, sequential, DEBUG)"
 		},
 		{
 			"type": "shell",
@@ -35,15 +35,8 @@
 			"problemMatcher": [
 				"$rustc"
 			],
-			"label": "PERFORMANCE actual"
+			"label": "rust: cargo test --relase (with minimal logs, sequential)",
+			"detail": "load-env [[name, value]; ['RUST_LOG', 'trace'] ['HEAP_SIZE', '100']]"
 		},
-		{
-			"type": "shell",
-			"command": "RUST_LOG=info cargo test --release collection -- --nocapture --test-threads=1",
-			"problemMatcher": [
-				"$rustc"
-			],
-			"label": "PERFORMANCE actual mark"
-		}
 	]
 }

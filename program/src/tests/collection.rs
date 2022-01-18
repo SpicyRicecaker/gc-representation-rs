@@ -1,5 +1,6 @@
 use rand::prelude::*;
 use rand_pcg::Pcg64;
+use std::env;
 
 use super::*;
 
@@ -69,29 +70,35 @@ fn random_garbage_collection<T: MemoryManager>(
     );
     log::info!("CRITICAL time it took to collect: {:#?}", instant.elapsed());
 
+    instant = Instant::now();
+
+    stack.dump_all(heap).unwrap();
+
+    log::info!("CRITICAL time it took to traverse: {:#?}", instant.elapsed());
+
     Ok(())
 }
 
 #[test]
 fn mark_compact_random() {
     const STACK_SIZE: usize = 1;
-    const HEAP_SIZE: usize = 20_000_000;
+    let heap_size: usize = env::var("HEAP_SIZE").unwrap().parse::<usize>().unwrap();
     // initializing the stack
     let mut stack = Stack::new(STACK_SIZE);
     // initializing the heap
-    let mut heap = MarkCompactHeap::init(HEAP_SIZE);
+    let mut heap = MarkCompactHeap::init(heap_size);
 
-    random_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE).unwrap();
+    random_garbage_collection(&mut stack, &mut heap, STACK_SIZE, heap_size).unwrap();
 }
 
 #[test]
 fn stop_and_copy_random() {
     const STACK_SIZE: usize = 1;
-    const HEAP_SIZE: usize = 40_000_000;
+    let heap_size: usize = env::var("HEAP_SIZE").unwrap().parse::<usize>().unwrap() * 2;
     // initializing the stack
     let mut stack = Stack::new(STACK_SIZE);
     // initializing the heap
-    let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
+    let mut heap = StopAndCopyHeap::init(heap_size);
 
-    random_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE / 2).unwrap();
+    random_garbage_collection(&mut stack, &mut heap, STACK_SIZE, heap_size / 2).unwrap();
 }
