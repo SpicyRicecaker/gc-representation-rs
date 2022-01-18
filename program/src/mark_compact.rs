@@ -6,6 +6,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// This mark-compact algorithm uses the LISP-2 style sliding algorithm Heap
 /// includes the graph data structure, and acts pretty much like an arena
+#[derive(Clone)]
 pub struct MarkCompactHeap {
     // the `top` of the memory != strip.len() because we don't want to have to
     // zero them out if we don't need to, and don't want to push / pop the vec
@@ -192,5 +193,42 @@ impl MemoryManager for MarkCompactHeap {
 
     fn free(&self) -> usize {
         self.free
+    }
+
+    // breadh-first traversal of node, printing out
+    fn right_recurse(&self, node_pointer: NodePointer) -> Result<String> {
+        let mut elements = Vec::new();
+
+        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
+        worklist.push_back(node_pointer);
+
+        while let Some(node_pointer) = worklist.pop_front() {
+            let node = self.get(node_pointer).unwrap();
+            if let Some(value) = node.value {
+                elements.push(value.to_string());
+            }
+            if let Some(child) = node.children.last() {
+                worklist.push_back(*child);
+            }
+        }
+        Ok(elements.join(", "))
+    }
+
+    fn sum(&self, node_pointer: NodePointer) -> Result<u64> {
+        let mut sum = 0;
+
+        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
+        worklist.push_back(node_pointer);
+
+        while let Some(node_pointer) = worklist.pop_front() {
+            let node = self.get(node_pointer).unwrap();
+            if let Some(value) = node.value {
+                sum += value as u64;
+            }
+            if let Some(child) = node.children.last() {
+                worklist.push_back(*child);
+            }
+        }
+        Ok(sum)
     }
 }

@@ -2,7 +2,7 @@
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// we'll have "stack" pointing to nodes on the heap
 /// it's really not necessary but it's useful in representing the layout of the stack
 pub struct Stack {
@@ -43,6 +43,37 @@ impl Stack {
         }
         Ok(root_list.join("\n"))
     }
+
+    pub fn right_recurse<T: MemoryManager>(&self, heap: &T) -> Result<String> {
+        // for each root
+        let mut root_list = Vec::new();
+        for root in &self.roots {
+            // aggregate the dump of all children in roots
+            let mut list_strings = Vec::new();
+            if let Some(child) = root.children.last() {
+                list_strings.push(heap.right_recurse(*child)?);
+            }
+            // compose all the list strings and add them to root_list
+            root_list.push(format!(
+                "[{}] {}",
+                root.value.unwrap(),
+                list_strings.join(" - ")
+            ));
+        }
+        Ok(root_list.join("\n"))
+    }
+
+    pub fn sum<T: MemoryManager>(&self, heap: &T) -> Result<u64> {
+        // for each root
+        let mut sum = 0;
+        for root in &self.roots {
+            // aggregate the dump of all children in roots
+            for child in &root.children {
+                sum += heap.sum(*child)?;
+            }
+        }
+        Ok(sum)
+    }
 }
 
 pub trait MemoryManager {
@@ -54,6 +85,8 @@ pub trait MemoryManager {
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
     fn free(&self) -> usize;
     fn dump(&self, node_pointer: NodePointer) -> Result<String>;
+    fn sum(&self, node_pointer: NodePointer) -> Result<u64>;
+    fn right_recurse(&self, node_pointer: NodePointer) -> Result<String>;
     // probably should use `GET_API` for a memory api
 }
 
@@ -81,7 +114,8 @@ impl From<NodePointer> for usize {
 
 /// A node represents some kind of object in memory
 /// A node doesn't technically need a parent pointer, it's literally just there for eye candy
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
+#[repr(align(8))]
 pub struct Node {
     pub forwarding_address: Option<NodePointer>,
     pub parent: Option<NodePointer>,

@@ -1,6 +1,9 @@
 use rand::prelude::*;
 use rand_pcg::Pcg64;
 use std::env;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+use crate::{init_log, recursively_add_children, seed_root};
 
 use super::*;
 
@@ -9,7 +12,6 @@ use std::time::Instant;
 fn random_garbage_collection<T: MemoryManager>(
     stack: &mut Stack,
     heap: &mut T,
-    stack_size: usize,
     heap_size: usize,
 ) -> Result<()> {
     init_log();
@@ -74,7 +76,10 @@ fn random_garbage_collection<T: MemoryManager>(
 
     stack.dump_all(heap).unwrap();
 
-    log::info!("CRITICAL time it took to traverse: {:#?}", instant.elapsed());
+    log::info!(
+        "CRITICAL time it took to traverse: {:#?}",
+        instant.elapsed()
+    );
 
     Ok(())
 }
@@ -88,7 +93,7 @@ fn mark_compact_random() {
     // initializing the heap
     let mut heap = MarkCompactHeap::init(heap_size);
 
-    random_garbage_collection(&mut stack, &mut heap, STACK_SIZE, heap_size).unwrap();
+    random_garbage_collection(&mut stack, &mut heap, heap_size).unwrap();
 }
 
 #[test]
@@ -100,5 +105,5 @@ fn stop_and_copy_random() {
     // initializing the heap
     let mut heap = StopAndCopyHeap::init(heap_size);
 
-    random_garbage_collection(&mut stack, &mut heap, STACK_SIZE, heap_size / 2).unwrap();
+    random_garbage_collection(&mut stack, &mut heap, heap_size / 2).unwrap();
 }

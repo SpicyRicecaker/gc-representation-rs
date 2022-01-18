@@ -1,9 +1,10 @@
+use crate::{init_log, seed_root, recursively_add_children};
+
 use super::*;
 
 fn actual_garbage_collection<T: MemoryManager>(
     stack: &mut Stack,
     heap: &mut T,
-    stack_size: usize,
     heap_size: usize,
 ) -> Result<()> {
     init_log();
@@ -111,7 +112,7 @@ fn mark_compact_actual() {
     // initializing the heap
     let mut heap = MarkCompactHeap::init(HEAP_SIZE);
 
-    actual_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE).unwrap();
+    actual_garbage_collection(&mut stack, &mut heap, HEAP_SIZE).unwrap();
 }
 
 #[test]
@@ -123,5 +124,5 @@ fn stop_and_copy_actual() {
     // initializing the heap
     let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
-    actual_garbage_collection(&mut stack, &mut heap, STACK_SIZE, HEAP_SIZE / 2).unwrap();
+    actual_garbage_collection(&mut stack, &mut heap,  HEAP_SIZE / 2).unwrap();
 }
