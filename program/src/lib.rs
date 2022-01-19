@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use shared::{MemoryManager, NodePointer, Stack, Node};
+use shared::{MemoryManager, Node, NodePointer, Stack};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 pub mod shared;

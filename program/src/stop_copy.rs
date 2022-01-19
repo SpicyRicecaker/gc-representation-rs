@@ -150,65 +150,10 @@ impl MemoryManager for StopAndCopyHeap {
         self.committed_memory.get_mut(usize::from(node_pointer))
     }
 
-    // breadh-first traversal of node, printing out
-    fn dump(&self, node_pointer: NodePointer) -> Result<String> {
-        let mut elements = Vec::new();
-
-        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
-        worklist.push_back(node_pointer);
-
-        while let Some(node_pointer) = worklist.pop_front() {
-            let node = self.get(node_pointer).unwrap();
-            if let Some(value) = node.value {
-                elements.push(value.to_string());
-            }
-            for child in &node.children {
-                worklist.push_back(*child);
-            }
-        }
-        Ok(elements.join(", "))
-    }
-
-    // breadh-first traversal of node, printing out
-    fn right_recurse(&self, node_pointer: NodePointer) -> Result<String> {
-        let mut elements = Vec::new();
-
-        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
-        worklist.push_back(node_pointer);
-
-        while let Some(node_pointer) = worklist.pop_front() {
-            let node = self.get(node_pointer).unwrap();
-            if let Some(value) = node.value {
-                elements.push(value.to_string());
-            }
-            if let Some(child) = node.children.last() {
-                worklist.push_back(*child);
-            }
-        }
-        Ok(elements.join(", "))
-    }
-
+    #[inline(always)]
     fn free(&self) -> usize {
         // `free` on stop-and-copy should be subtracted by to space
         self.free - self.to_space
-    }
-
-    fn sum(&self, node_pointer: NodePointer) -> Result<u64> {
-        let mut sum = 0;
-
-        let mut worklist: VecDeque<NodePointer> = VecDeque::new();
-        worklist.push_back(node_pointer);
-
-        while let Some(node_pointer) = worklist.pop_front() {
-            let node = self.get(node_pointer).unwrap();
-            if let Some(value) = node.value {
-                sum += value as u64;
-            }
-            if let Some(child) = node.children.last() {
-                worklist.push_back(*child);
-            }
-        }
-        Ok(sum)
     }
 }
 

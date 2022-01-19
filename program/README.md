@@ -1,6 +1,20 @@
-Set heap_size to 1000000
+## Setup
 
-marks 
+Install `cargo-criterion`.
+```shell
+cargo install cargo-criterion
+```
+
+(Optional) install `gnuplot` for graphs.
+
+```shell
+git clone https://github.com/SpicyRicecaker/gc-representation-rs
+cd program
+# Set heap_size to 1000000
+HEAP_SIZE=1000000 cargo criterion
+```
+
+## Results 
 
 ```
 Gnuplot not found, using plotters backend
@@ -75,4 +89,3 @@ Found 10 outliers among 100 measurements (10.00%)
 seems that when more objects are deleted in a garbage collection cycle, compacting garbage both collects faster and runs faster (when traversing the tree) afterwards. This is probably because the copying garbage collector has to copy many more items, and the cost of this outweights just traversing the heap a few times. The locality also suffers because the parent-child ordering of the original is not maintained.
 
 In comparison, when less objects are deleted, either because many are persisted or because the heap is basically almost full, copying garbage collection trumps compacting garbage collection because it traverses the heap much faster, and the locality suffers less.
-

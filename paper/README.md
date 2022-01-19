@@ -1,5 +1,13 @@
 # Stop and Copy vs. Mark Compact Garbage Collection Algorithms
 
+## Installation
+
+Install tectonic
+
+Install pygments python lib
+
+Install biber
+
 ## Compiling
 
 ```

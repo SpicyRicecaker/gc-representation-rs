@@ -14,7 +14,11 @@ use rand::prelude::*;
 use rand_pcg::Pcg64;
 use std::env;
 
-fn get_heap_boring<T: MemoryManager>(stack: &mut Stack, heap: &mut T, heap_size: usize) -> Result<()> {
+fn get_heap_boring<T: MemoryManager>(
+    stack: &mut Stack,
+    heap: &mut T,
+    heap_size: usize,
+) -> Result<()> {
     {
         let child_node_pointer = seed_root(stack, heap).unwrap();
         recursively_add_children(child_node_pointer, heap_size - 1, stack, heap).unwrap();
@@ -118,9 +122,7 @@ fn mark_compact_random_benchmark(c: &mut Criterion) {
         )
     });
 
-    c.bench_function("traverse mark compact", |b| {
-        b.iter(|| stack.sum(&heap))
-    });
+    c.bench_function("traverse mark compact", |b| b.iter(|| stack.sum(&heap)));
 
     stack.roots[0].children.pop();
     collect(&mut stack, &mut heap);
@@ -158,10 +160,7 @@ fn stop_and_copy_random_benchmark(c: &mut Criterion) {
         )
     });
 
-    c.bench_function("traverse stop and copy", |b| {
-        b.iter(|| stack.sum(&heap))
-    });
-
+    c.bench_function("traverse stop and copy", |b| b.iter(|| stack.sum(&heap)));
 
     stack.roots[0].children.pop(); // collect(&mut stack, &mut heap);
     collect(&mut stack, &mut heap);

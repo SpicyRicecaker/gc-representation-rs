@@ -1,12 +1,8 @@
-use crate::{init_log, seed_root, recursively_add_children};
+use crate::{init_log, recursively_add_children, seed_root};
 
 use super::*;
 
-fn sanity_garbage_collection<T: MemoryManager>(
-    stack: &mut Stack,
-    heap: &mut T,
-    heap_size: usize,
-) {
+fn sanity_garbage_collection<T: MemoryManager>(stack: &mut Stack, heap: &mut T, heap_size: usize) {
     init_log();
 
     // first add one child (allocated on the heap) to our root on the stack
@@ -28,7 +24,10 @@ fn sanity_garbage_collection<T: MemoryManager>(
     // which should free up *3* slots after garbage collection
     log::trace!("now removing children of one node");
 
-    heap.get_mut(stack.roots[0].children[0]).unwrap().children.remove(0);
+    heap.get_mut(stack.roots[0].children[0])
+        .unwrap()
+        .children
+        .remove(0);
 
     log::trace!("{}", stack.dump_all(heap).unwrap());
 

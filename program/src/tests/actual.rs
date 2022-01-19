@@ -1,4 +1,4 @@
-use crate::{init_log, seed_root, recursively_add_children};
+use crate::{init_log, recursively_add_children, seed_root};
 
 use super::*;
 
@@ -124,5 +124,5 @@ fn stop_and_copy_actual() {
     // initializing the heap
     let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
-    actual_garbage_collection(&mut stack, &mut heap,  HEAP_SIZE / 2).unwrap();
+    actual_garbage_collection(&mut stack, &mut heap, HEAP_SIZE / 2).unwrap();
 }
