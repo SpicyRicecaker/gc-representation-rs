@@ -107,3 +107,49 @@ fn stop_and_copy_random() {
 
     random_garbage_collection(&mut stack, &mut heap, heap_size / 2).unwrap();
 }
+
+fn sum_garbage_collection<T: MemoryManager>(
+    stack: &mut Stack,
+    heap: &mut T,
+    heap_size: usize,
+) -> Result<()> {
+    let node_pointer = heap.alloc(Node::default(), stack).unwrap();
+    stack.roots[0].children.push(node_pointer);
+
+    // dbg!(stack.dump_all(heap).unwrap());
+    // 0, 1..., 8, 9
+    recursively_add_children(node_pointer, heap_size - 1, stack, heap).unwrap();
+    // the sum of all points should be 45
+    assert_eq!(stack.sum(heap).unwrap(), 45);
+    // also add some cyclic data structures
+    heap.get_mut(NodePointer::from(heap_size-1)).unwrap().children.push(NodePointer::from(0));
+    dbg!(stack.dump_all(heap).unwrap());
+    // check again
+    assert_eq!(stack.sum(heap).unwrap(), 45);
+
+    Ok(())
+}
+
+#[test]
+fn mark_compact_sum() {
+    const STACK_SIZE: usize = 1;
+    let heap_size: usize = 11;
+    // initializing the stack
+    let mut stack = Stack::new(STACK_SIZE);
+    // initializing the heap
+    let mut heap = MarkCompactHeap::init(heap_size);
+
+    sum_garbage_collection(&mut stack, &mut heap, heap_size).unwrap();
+}
+
+#[test]
+fn stop_and_copy_sum() {
+    const STACK_SIZE: usize = 1;
+    let heap_size: usize = 22;
+    // initializing the stack
+    let mut stack = Stack::new(STACK_SIZE);
+    // initializing the heap
+    let mut heap = MarkCompactHeap::init(heap_size);
+
+    sum_garbage_collection(&mut stack, &mut heap, heap_size / 2).unwrap();
+}
