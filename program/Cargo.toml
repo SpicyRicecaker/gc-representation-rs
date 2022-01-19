@@ -5,9 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[lib]
-name = "gc"
-path = "src/lib.rs"
+# [lib]
+# name = "gc"
+# path = "src/lib.rs"
 
 [dependencies]
 log = "0.4.14"

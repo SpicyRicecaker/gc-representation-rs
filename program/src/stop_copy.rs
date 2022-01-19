@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use log::trace;
 
 use crate::shared::{MemoryManager, Node, NodePointer, Stack};

@@ -1,10 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use gc::shared::{MemoryManager, Stack};
+use gc_representation_rs::shared::{MemoryManager, Stack};
 
-use gc::shared::*;
-use gc::stop_copy::StopAndCopyHeap;
-use gc::{mark_compact::*, recursively_add_children, seed_root};
+use gc_representation_rs::shared::*;
+use gc_representation_rs::stop_copy::StopAndCopyHeap;
+use gc_representation_rs::{mark_compact::*, recursively_add_children, seed_root};
 // use crate::stop_copy::*;
 
 // use std::time::{Duration, Instant};
