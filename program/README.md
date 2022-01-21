@@ -86,6 +86,42 @@ Found 10 outliers among 100 measurements (10.00%)
   4 (4.00%) high severe
 ```
 
+```
+Benchmarking collect stop and copy: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 12.8s, or reduce sample count to 30.
+collect stop and copy   time:   [75.358 ms 75.437 ms 75.530 ms]                                  
+
+Benchmarking traverse stop and copy: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 19.8s, or reduce sample count to 20.
+traverse stop and copy  time:   [196.75 ms 197.26 ms 197.76 ms]                                   
+
+Benchmarking [full clear] collect stop copy: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 11.0s, or reduce sample count to 40.
+[full clear] collect stop copy                                                                            
+                        time:   [45.778 ms 45.852 ms 45.933 ms]
+
+Benchmarking [full clear] traverse stop copy: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 9.7s, or reduce sample count to 50.
+[full clear] traverse stop copy                                                                            
+                        time:   [96.135 ms 96.501 ms 96.857 ms]
+
+Benchmarking collect mark compact: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 16.7s, or reduce sample count to 20.
+collect mark compact    time:   [123.51 ms 124.00 ms 124.47 ms]                                 
+
+Benchmarking traverse mark compact: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 19.9s, or reduce sample count to 20.
+traverse mark compact   time:   [197.76 ms 198.15 ms 198.54 ms]                                  
+
+Benchmarking [full clear] collect mark compact: Warming up for 3.0000 s
+Warning: Unable to complete 100 samples in 5.0s. You may wish to increase target time to 7.1s, or reduce sample count to 70.
+[full clear] collect mark compact                                                                            
+                        time:   [30.542 ms 30.604 ms 30.669 ms]
+
+[full clear] traverse mark compact                                                                            
+                        time:   [10.302 ms 10.383 ms 10.471 ms]
+```
+
 seems that when more objects are deleted in a garbage collection cycle, compacting garbage both collects faster and runs faster (when traversing the tree) afterwards. This is probably because the copying garbage collector has to copy many more items, and the cost of this outweights just traversing the heap a few times. The locality also suffers because the parent-child ordering of the original is not maintained.
 
 In comparison, when less objects are deleted, either because many are persisted or because the heap is basically almost full, copying garbage collection trumps compacting garbage collection because it traverses the heap much faster, and the locality suffers less.

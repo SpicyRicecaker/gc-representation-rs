@@ -157,6 +157,7 @@ impl MemoryManager for StopAndCopyHeap {
 
 impl StopAndCopyHeap {
     // copy function
+    #[inline(always)]
     pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
         // if object has a forwarding address, it means that we've already moved it over to to space, so we can just give it its reference
         // dbg!(node_pointer, stapi::value(node_pointer, self)?);
