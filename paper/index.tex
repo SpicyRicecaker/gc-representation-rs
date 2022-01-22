@@ -4,39 +4,41 @@
 \usepackage[margin=1in]{geometry}
 % Core math packages,
 % Mathtools loads amsmath, and amsmath gives basic math symbs
-% Amsfonts & amssymb are misc. symbols you might need
-\usepackage{mathtools, amsfonts, amssymb}
-% easy urls, hyphens option allows word-break of urls
+% mathtools includes amsmath, which includes amstext. 
+% amssymb includes amsfonts. Both include misc. symbols you might need
+\usepackage{mathtools, amssymb}
+% file urls, hyphens option allows word-break of urls
 \usepackage[hyphens]{url}
-% Links in a pdf
+% Allows the use of \href{}{} to create hyperlinks
 \usepackage{hyperref}
-% Hex values for colors; custom colors
+% Allows the use of Hhx values for colors and custom colors
 \usepackage{xcolor}
-% Use in pictures, graphs, and figures
+% Extends the graphics package, which allows the creation of pictures, graphs, and figures
 \usepackage{graphicx}
-% Header package
+% Creates headers and footers
 \usepackage{fancyhdr}
-% Underlining with line breaks
-\usepackage{ulem}
+% Allows the underlining of words with line breaks normalem to disable the
+% option of changing italicized text to underlined
+\usepackage[normalem]{ulem}
 % Adjust accordingly given warning messages
 \setlength{\headheight}{15pt}
-% So we can more easily format text with pictures
+% Allows us to specify where a picture should be placed with respect to words 
 \usepackage{float}
-% Images and drawing graphs
+% Allows the user to make custom images and graphs inside of latex
 \usepackage{tikz}
-% Something about bits and stuff
-\usepackage[T1]{fontenc}
-% Set the incoding to unicode instead of ascii
-\usepackage[utf8]{inputenc}
+% Allows the use of custom fonts
+% \usepackage[T1]{fontenc}
+% UNEEDED ~~Sets the encoding of the file to unicode instead of ascii~~ luatex and xetex default to unicode
+% \usepackage[utf8]{inputenc}
 % Set the font to arial
 % \usepackage{fontspec}
 % \usepackage{mathspec}
 % \setmainfont{Arial}
 % \setmathrm{Arial}
 % \setmathfont(Digits,Latin){Arial}
-% Defines stuff about tables
+% Allows the creation of tables in a more procedural way 
 \usepackage{tabularx}
-% Similar to `lorem*[n]` in emmet
+% Allows the creation of dummy text. Similar to `lorem*[n]` in emmet
 \usepackage{lipsum}
 % Spits columns into two, the sane way
 \usepackage{paracol}
@@ -44,25 +46,29 @@
 \usepackage{multicol}
 % Removes automatic indent at the start of a paragraph
 \usepackage{indentfirst} 
-% Modularity! Includes other .tex files, precompiled
-% Use \subfile{path_of_doc} to include other filesr
+% Allows us to split a latex file into multiple files. Modularity! Includes
+% other .tex files, precompiled Use \subfile{path_of_doc} to include other files
 \usepackage{subfiles}
-% use natbib for custom in-text citations (e.g. author, n.d.)
-% \usepackage{natbib}
+
+% Allows custom specification of in-tex citations.
+% Uses `biber', an external program, as a backend!
 \bibliographystyle{plain}
 \usepackage[backend=biber,dateabbrev=false]{biblatex}
 \addbibresource{./citations.bib}
-% code blocks
-\usepackage[outputdir=out]{minted}
 
-% Sets footer
+% Allows the creation of syntax-highlighted, formatted code blocks
+\usepackage[outputdir=out]{minted}
+\setminted{fontsize=\small}
+
+% Sets footer style
 \pagestyle{fancy}
-% Removes default footer style
+% Removes the default footer style
 \fancyhf{}
 
+% Specifies the right header's content's
 \rhead{\thepage{}}
 
-% Makes links look more appealing
+% Makes hyperlinks look more appealing
 \hypersetup{ 
 colorlinks=true,
 % linkcolor=blue,
