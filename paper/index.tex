@@ -51,9 +51,9 @@
 % \usepackage{natbib}
 \bibliographystyle{plain}
 \usepackage[backend=biber,dateabbrev=false]{biblatex}
-\addbibresource{./citations}
+\addbibresource{./citations.bib}
 % code blocks
-\usepackage{minted}
+\usepackage[outputdir=out]{minted}
 
 % Sets footer
 \pagestyle{fancy}
@@ -72,5 +72,5 @@ urlcolor=blue,
 }
 
 \begin{document}
-% \subfile{body}
+\subfile{body}
 \end{document}

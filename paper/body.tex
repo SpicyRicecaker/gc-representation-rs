@@ -369,7 +369,7 @@ Upon reaching the end of the \verb+to_space+, garbage collection is already done
 
 However, despite the fact that Cheney's stop-and-copy algorithm has much fewer steps than the mark-compact garbage collector, it has several downsides. Apart from the most obvious thing being the heap split in half, it's important to note that the way the worklist is traversed in this algorithm, it's effectively breadth-first by reference. Therefore, when objects are moved, their original order is not preserved, unlike with the mark-compact garbage collector. This could negatively affect program performance, because parents have the possibility of being separated from their children, resulting in large differences in locality despite the heap being compacted.
 
-It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large surviving objects multiple times will inevitably lead to poor performance \cite[Chapter 4]{gc_handbook}.
+It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large surviving objects multiple times will inevitably lead to poor performance \cite[Chapter~4]{gc_handbook}.
 
 Stop-and-copy garbage collection actually moves more than mark-compact garbage collection, because there isn't the possibility of objects staying in place and already being compacted. But on the flipside, instead of having to traverse the heap 3 times to achieve heap compaction, the heap is effectively only traversed one time in one fell swoop.
 
@@ -379,12 +379,12 @@ And while mark-and-copy garbage collection is using double the memory that mark-
 
 % To test these two algorithms, a dead simple binary tree with a set number of \(1,000,000\) objects will be generated for each implementation of the garbage collection. Then, a seeded random number generator will be used to link \(1,000,000\) random objects with one another in the latter half of the tree. Finally, a number of children will be removed from the top \(10\%\) of parents. This will create enough garbage to 
 
-What is the mutator again?
-Revise images
-What is the l2 cache?
-~50 mb cache on the CPU responsible for quickly accessing data, is orders of magnitude faster than RAM or harddrive?
-When does it get proced when...
-Bugs: https://github.com/SpicyRicecaker/gc-representation-rs
+% What is the mutator again?
+% Revise images
+% What is the l2 cache?
+% ~50 mb cache on the CPU responsible for quickly accessing data, is orders of magnitude faster than RAM or harddrive?
+% When does it get proced when...
+% Bugs: https://github.com/SpicyRicecaker/gc-representation-rs
 
 \section{Works Cited}
 
