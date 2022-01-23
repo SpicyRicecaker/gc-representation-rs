@@ -58,6 +58,21 @@ impl Stack {
         }
         Ok(sum)
     }
+    pub fn count<T: MemoryManager>(&self, heap: &T) -> Result<(u64, u64)> {
+        let mut node_count = 0;
+        let mut connection_count = 0;
+
+        // for each root
+        for root in &self.roots {
+            // aggregate the dump of all children in roots
+            for child in &root.children {
+                let (node_count_res, node_ref_count_res) = heap.count(*child).unwrap();
+                node_count += node_count_res;
+                connection_count += node_ref_count_res;
+            }
+        }
+        Ok((node_count, connection_count))
+    }
 }
 
 pub trait MemoryManager {
@@ -114,6 +129,27 @@ pub trait MemoryManager {
             }
         }
         Ok(sum)
+    }
+    /// Returns a tuple with a node and connection count (edges) reference
+    fn count(&self, node_pointer: NodePointer) -> Result<(u64, u64)> {
+        let mut node_count = 0;
+        let mut connection_count = 0;
+        let mut visited = HashSet::new();
+
+        let mut worklist = VecDeque::new();
+        worklist.push_back(node_pointer);
+        while let Some(node) = worklist.pop_front() {
+            connection_count += 1;
+            if !visited.contains(&node) {
+                visited.insert(node);
+                node_count += 1;
+
+                for child in &self.get(node).unwrap().children {
+                    worklist.push_back(*child);
+                }
+            }
+        }
+        Ok((node_count, connection_count))
     }
 }
 

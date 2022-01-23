@@ -1,7 +1,8 @@
-use rand::prelude::*;
-use rand_pcg::Pcg64;
 use std::env;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+use rand::prelude::*;
+use rand_pcg::Pcg64;
 
 use crate::{init_log, recursively_add_children, seed_root};
 
@@ -122,7 +123,10 @@ fn sum_garbage_collection<T: MemoryManager>(
     // the sum of all points should be 45
     assert_eq!(stack.sum(heap).unwrap(), 45);
     // also add some cyclic data structures
-    heap.get_mut(NodePointer::from(heap_size-1)).unwrap().children.push(NodePointer::from(0));
+    heap.get_mut(NodePointer::from(heap_size - 1))
+        .unwrap()
+        .children
+        .push(NodePointer::from(0));
     dbg!(stack.dump_all(heap).unwrap());
     // check again
     assert_eq!(stack.sum(heap).unwrap(), 45);

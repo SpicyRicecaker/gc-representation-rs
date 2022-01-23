@@ -377,7 +377,15 @@ And while mark-and-copy garbage collection is using double the memory that mark-
 
 \section{Experiment}
 
-% To test these two algorithms, a dead simple binary tree with a set number of \(1,000,000\) objects will be generated for each implementation of the garbage collection. Then, a seeded random number generator will be used to link \(1,000,000\) random objects with one another in the latter half of the tree. Finally, a number of children will be removed from the top \(10\%\) of parents. This will create enough garbage to 
+From the algorithms above, one can infer that for a garbage collector, there are two areas where pure performance can be measured. This is during the \verb+collect()+ part of the algorithm, when the graph of live objects is being traversed and objects are being moved to their compacted points, as well as the runtime performance of the program, when the objects on the heap are being accessed. 
+
+To measure the collection performance, garbage will be generated in a graph of objects. And to measure the runtime performance, the graph of all objects will be traversed, and the values that each of the objects will be summed up. 
+
+To generate the testing data, the custom abstraction of a garbage collected data structure will be used \cite{youtube_introductory_video}. A dead simple binary tree will be filled with a predetermined number of \(1,000,000\) objects. Every node is first pushed to the end of the free space on the vector, and children are added as indices, which are an abstraction of pointers. Each node will have two children until the leaf nodes of the tree are reached. 
+
+Then, a seeded random number generator will be used to link \(500,000\) random objects from the first half of the tree to \(500,000\) random objects in the latter half of the tree (via adding their indices as children). Finally, a number of children will be removed from a range of parents in the tree, which will generate garbage (the number of removed nodes will be shown in the data below). 
+
+There will be two sets of data, one with a lot of children 
 
 % What is the mutator again?
 % Revise images

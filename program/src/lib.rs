@@ -1,5 +1,8 @@
 use std::collections::VecDeque;
 
+use rand::prelude::*;
+use rand_pcg::Pcg64;
+
 use shared::{MemoryManager, Node, NodePointer, Stack};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -8,8 +11,10 @@ pub mod shared;
 pub mod mark_compact;
 pub mod stop_copy;
 
+// testing stuff below
+
 #[cfg(test)]
-mod tests;
+pub mod tests;
 
 pub fn init_log() {
     let _ = env_logger::builder().is_test(true).try_init();
@@ -64,4 +69,90 @@ pub fn seed_root<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<No
     let node_pointer = heap.alloc(temp, stack).unwrap();
     stack.roots[0].children.push(node_pointer);
     Ok(node_pointer)
+}
+
+pub fn get_heap_boring<T: MemoryManager>(
+    stack: &mut Stack,
+    heap: &mut T,
+    heap_size: usize,
+) -> Result<()> {
+    {
+        let child_node_pointer = seed_root(stack, heap).unwrap();
+        recursively_add_children(child_node_pointer, heap_size - 1, stack, heap).unwrap();
+    }
+
+    // create number of links equal to number of nodes, randomly from anywhere to anywhere
+    let mut rng = Pcg64::seed_from_u64(1234);
+    {
+        for _ in 0..heap_size {
+            // generate two random numbers
+            let (first, second) = (
+                rng.gen_range(0..heap_size),
+                rng.gen_range(heap_size / 2..heap_size),
+            );
+            // link child before point of removal to parent
+            heap.get_mut(NodePointer::from(first))
+                .unwrap()
+                .children
+                .push(NodePointer::from(second));
+        }
+    }
+
+    // randomly remove links half the population of the latter half
+    {
+        for _ in 0..(heap_size / 10) {
+            // generate two random numbers
+            let num = rng.gen_range(heap_size / 200..heap_size / 100);
+            // link child before point of removal to parent
+            heap.get_mut(NodePointer::from(num)).unwrap().children.pop();
+        }
+    }
+
+    // run gc
+    // heap.collect(stack).unwrap();
+
+    // stack.dump_all(heap).unwrap();
+
+    Ok(())
+}
+
+pub fn get_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T, heap_size: usize) -> Result<()> {
+    {
+        let child_node_pointer = seed_root(stack, heap).unwrap();
+        recursively_add_children(child_node_pointer, heap_size - 1, stack, heap).unwrap();
+    }
+
+    // create number of links equal to number of nodes, randomly from anywhere to anywhere
+    let mut rng = Pcg64::seed_from_u64(1234);
+    {
+        for _ in 0..heap_size {
+            // generate two random numbers
+            let (first, second) = (
+                rng.gen_range(0..heap_size),
+                rng.gen_range(heap_size / 2..heap_size),
+            );
+            // link child before point of removal to parent
+            heap.get_mut(NodePointer::from(first))
+                .unwrap()
+                .children
+                .push(NodePointer::from(second));
+        }
+    }
+
+    // randomly remove links half the population of the latter half
+    {
+        for _ in 0..(((heap_size / 100) - heap_size / 200) / 2) {
+            // generate two random numbers
+            let num = rng.gen_range(heap_size / 200..heap_size / 100);
+            // link child before point of removal to parent
+            heap.get_mut(NodePointer::from(num)).unwrap().children.pop();
+        }
+    }
+
+    // run gc
+    // heap.collect(stack).unwrap();
+
+    // stack.dump_all(heap).unwrap();
+
+    Ok(())
 }

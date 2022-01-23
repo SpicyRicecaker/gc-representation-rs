@@ -5,4 +5,5 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 mod actual;
 mod collection;
+mod metric;
 mod sanity;
