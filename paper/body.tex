@@ -32,49 +32,45 @@ Next, the collection performance of each algorithm (how long it takes to clean u
 
 Finally, research will be done on the basics of hardware caches and organization of memory in modern systems, as one algorithm or another due to its compaction process could support a faster runtime of the program after collection of garbage, and this information will be used to critically analyze the results of the performance of the two algorithms.
 
-I will then do research on the software and hardware factors in modern computers that garbage collection could have an effect on, including memory layout and algorithms that access the memory, and use this information to critically analyze the results of the performance of the two algorithms.
-
 \section{Background}
 
 \subsection{The concepts of memory management (explained in the context of a game)}
 
 \begin{quote}
-    Imagine a game with multiple enemies. How do we store the enemies?
+    Imagine a game with multiple enemies. How does one store, add, and remove an enemy?
 \end{quote}
 
 The above question basically defines memory managment.
 
-You might first think that a plain vector might take care of managing the enemies.
+One might first believe that a plain vector might take care of managing the enemies.
 
 \begin{minted}[breaklines]{rust}
     enemies = [enemy1, enemy2, enemy3]
 \end{minted}
 
-Whenever you want to spawn an enemy, you \textit{allocate} it in the array
+Whenever one wants to spawn an enemy, it is \textit{allocated} to the vector
 
 \begin{minted}[breaklines]{rust}
     enemies.push(enemy4)
     // enemies = [enemy1, enemy2, enemy3, enemy4]
 \end{minted}
 
-And whenever you want to despawn an enemy, you deallocate it from the array
+And whenever one wants to despawn an enemy, one deallocates it from the vector
 
 \begin{minted}[breaklines]{rust}
     enemies.remove(0)
     // enemies = [enemy2, enemy3, enemy4]
 \end{minted}
 
-Simple enough, right?
+However, the size of physical memory, one a garbage collector has to deal with, unlike a vector, cannot be freely removed or changed.
 
-But we're using some rather high-level abstractions here like \verb+remove+ and \verb+push+.
+Imagine that the vector storing the enemies must be of a fixed length, and one couldn't push or pop from the array at will. Now how would one manage ``alive'' and ``dread'' enemies?
 
-Imagine that the array you had was of a fixed length, and you couldn't push or pop from the array at will. Now how would you manage ``alive'' and ``dread'' enemies?
-
-In this array, you would have to keep track of where the next free space was.
+In this array, one would have to keep track of where the next free space is, in order to write to that free space when an enemy should be allocated. 
 
 \begin{minted}[breaklines]{rust}
-    free = 0
-    enemies = [NULL, enemy2, enemy3]
+    // enemies = [enemy1, enemy2, enemy3, NULL]
+    free = 3
 \end{minted}
 
 This simple action of keeping track of the free space, is where all the problems of memory management comes from.
@@ -83,11 +79,11 @@ This simple action of keeping track of the free space, is where all the problems
 
 The data of all computer programs are stored in a place we call memory.
 
-Whenever we want to make room for new data, we must allocate memory to free space. And whenever we want to remove data, we must deallocate that memory, back into free space.
+Whenever one wants to make room for new data, one must allocate memory to free space. And whenever one wants to remove data, one must deallocate that memory, back into free space.
 
-In modern computers, there are two places where the program can allocate memory: the stack and the heap .
+In modern computers, there are two places where the program can allocate memory: the stack and the heap.
 
-In the stack, whenever we wish to allocate something, all we have to do is bump a pointer's memory address up to determine where our next boundary of free memory is \cite{the_rust_programming_language}. However, whenever one wishes to deallocate memory, they must do so from top to the bottom.
+In the stack, whenever one wishes to allocate something, all one has to do is bump a pointer's memory address up to determine where our next boundary of free memory is \cite{the_rust_programming_language}. However, whenever one wishes to deallocate memory, they must do so from top to the bottom.
 
 Thus, the stack always consists of a block of contiguous used memory, and a block of contiguous free memory.
 
@@ -104,15 +100,15 @@ However, the question then becomes, how do we keep track of which sections of th
 
 \subsection{Memory Management Techniques}
 
-There are several ways to manage memory in a language. One is by manually allocating and deallocating: the programmer specifies exactly how much memory is needed at a specific time, and decides when something should be deallocated. In lower-level languages, this is normal. However, manual allocation often requires a lot of experience to learn, and even with it, requires much more time to think about and write a program. It could also easily result in many types of bugs, such as using memory that is already freed, freeing memory twice, and not freeing memory in the first place \cite[Chapter~1]{garbage_collection_overview_uw, gc_handbook}
+There are several ways to manage memory in a language. One is by manually allocating and deallocating: the programmer specifies exactly how much memory is needed at a specific time, and decides when something should be deallocated. In lower-level languages, this is normal. However, manual allocation often requires a lot of experience to learn, and even with it, requires much more time to think about and write a program. It could also easily result in many types of bugs, such as using memory that is already freed, freeing memory twice, and not freeing memory in the first place \cites{garbage_collection_overview_uw}[Chapter~1]{gc_handbook}
 
 Hence, to alleviate the burden of having to keep track of manual memory management, many modern programming languages use automatic memory management. There are many different ways to automatically manage memory. The only types of garbage collectors this paper is concerned with are tracing garbage collectors, which, as their name suggests, directly check objects to determine if they are ``alive'' (used by the program) or ``dead'' (not in use any longer) \cite{a_unified_theory_of_garbage_collection}. In other words, tracing garbage collectors specifically determine if an object is accessible (garbage) or not by traversing some kind of tree \cite[Chapter~1]{gc_handbook}.
 
-The main concept of garbage collection, simple: whenever we want to create a new object, we call \verb+allocate()+, and calculate the new free space on the heap. But if the heap is full, or if we wish to collect the garbage at any time, then we call \verb+collect()+ \cite{gc_handbook}, which as the name suggests, makes the bulk of the garbage collector.
+The main concept of garbage collection is simple: whenever we want to create a new object, we call \verb+allocate()+, and calculate the new free space on the heap. But if the heap is full, or if we wish to collect the garbage at any time, then we call \verb+collect()+ \cite{gc_handbook}, which as the name suggests, makes the bulk of the garbage collector.
 
-\section{LISP 2 Sliding Mark-Compact Algorithm}
+\subsection{LISP-2 Sliding Mark-Compact Algorithm}
 
-One very popular and easy to implement type of tracing garbage collector is the LISP 2 style mark-compact garbage collection algorithm.
+One very popular and easy to implement type of tracing garbage collector is the LISP 2 mark-compact garbage collection algorithm.
 
 \begin{figure}[H]
     \centering
@@ -127,13 +123,13 @@ The \verb+collect()+ function of this mark-compact algorithm can be broken down 
 To determine which objects are alive and dead, we attempt to traverse the entire heap. We start from the root nodes, where the mutator can directly affect the values of the heap \cites[3.2~Marking]{redhat_openjdk}[Chapter~3]{gc_handbook}. Then we look at the objects that they reference. Accessible objects are objects that can eventually be reached by reference from the roots. We could use either breadth-first, or depth-first traversal to traverse the heap depending on the implementation, and  objects that are then found to be inaccessible (because they are unmarked) are defined as 'garbage', and can be removed in the next step, compaction.
 
 \begin{minted}[linenos, breaklines]{rust}
-// create marking bitmap using breadth-first traversal of the tree
-let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
+let mut marked_node_pointers = Vec::new();
+// create marking 'bitmap' using breadth-first traversal of the tree
 {
     // first create a worklist, which is going to be a queue, since we're doing breadth-first traversal
     let mut worklist: VecDeque<NodePointer> = VecDeque::new();
 
-    // populate the worklist with children from the reachable stack first
+    // populate the worklist with children reachable from the roots
     for root in &stack.roots {
         for child in &root.children {
             worklist.push_back(*child);
@@ -141,10 +137,11 @@ let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
     }
     // then we just keep on taking from the worklist until it's empty
     while let Some(node) = worklist.pop_front() {
-        // if the node isn't already marked
-        if !marked_node_pointers[usize::from(node)] {
+        // if the node isn't marked (already)
+        if self.get(node).unwrap().forwarding_address.is_none() {
             // we mark it because it means it's accessible
-            marked_node_pointers.set(usize::from(node), true);
+            self.get_mut(node).unwrap().forwarding_address = Some(NodePointer::default());
+            marked_node_pointers.push(node);
             // then add the rest of its children to the back of the queue
             for child_node_pointer in &self.get(node).unwrap().children {
                 worklist.push_back(*child_node_pointer);
@@ -153,6 +150,10 @@ let mut marked_node_pointers: BitVec = bitvec![0; self.committed_memory.len()];
     }
 }
 // now all our reachable objects should be marked, everything not in the list is garbo
+// we only care about the marked objects from now on
+// 
+// we sort the marking map because we wish to preserve the original order of the nodes
+marked_node_pointers.sort_unstable();
 \end{minted}
 
 As for storing whether an object is marked with a starting bit, a rather expensive but easy to implement option is to use a bitmap (an array of bits, basically) where each index corresponds to each object in the heap, which is marked 1 or 0 to show that it is alive (1) or dead (0) \cite[Chapter~3]{gc_handbook}.

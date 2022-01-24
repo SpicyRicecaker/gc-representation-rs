@@ -60,27 +60,26 @@ impl MemoryManager for MarkCompactHeap {
     /// mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<()> {
         log::debug!("exceeded heap size! now calling collect function for mark_compact");
-        // we want to mark all nodes first
 
-        let mut marked_node_pointers = Vec::new();
-        // create marking bitmap using breadth-first traversal of the tree
+        // this block contains the code to mark all reachable objects
         {
-            // first create a worklist, which is going to be a queue, since we're doing breadth-first traversal
+            // first create a worklist, which is going to be a queue, since
+            // we're doing breadth-first traversal
             let mut worklist: VecDeque<NodePointer> = VecDeque::new();
 
-            // populate the worklist with children from the reachable stack first
+            // populate the worklist with children reachable from the roots
             for root in &stack.roots {
                 for child in &root.children {
                     worklist.push_back(*child);
                 }
             }
+
             // then we just keep on taking from the worklist until it's empty
             while let Some(node) = worklist.pop_front() {
                 // if the node isn't marked (already)
-                if self.get(node).unwrap().forwarding_address.is_none() {
+                if !self.is_marked(node) {
                     // we mark it because it means it's accessible
-                    self.get_mut(node).unwrap().forwarding_address = Some(NodePointer::default());
-                    marked_node_pointers.push(node);
+                    self.mark(node);
                     // then add the rest of its children to the back of the queue
                     for child_node_pointer in &self.get(node).unwrap().children {
                         worklist.push_back(*child_node_pointer);
@@ -88,9 +87,9 @@ impl MemoryManager for MarkCompactHeap {
                 }
             }
         }
-        marked_node_pointers.sort_unstable();
-        // now all our reachable objects should be marked, everything not in the list is garbo
+        // now all our reachable objects should be marked, everything that isn't is considered garbo
         // we only care about the marked objects from now on
+
         // log::trace!(
         //     "marked_node_pointers is this long: {}",
         //     marked_node_pointers.len()
@@ -101,63 +100,77 @@ impl MemoryManager for MarkCompactHeap {
         //     iterator.clone().count()
         // );
 
+        // the next three blocks contain the compact code
         // free starts at 0, the beginning of the point which we wish to compact to
         let mut free = 0;
-        // compact occurs next
+        // 1. the first step is to calculate new locations of all objects
         {
-            // the first step is to calculate new locations of all objects
-
-            // we iterate over all objects in the heap TODO vec of nodes seems really inefficient
-            // if it is marked,
-            for &node in &marked_node_pointers {
-                let mut marked_node = self.get_mut(node).unwrap();
-                // set its forwarding address equal to free
-                marked_node.forwarding_address = Some(NodePointer::from(free));
-                // then bump free
-                free += 1;
-                if free > self.committed_memory.len() {
-                    return Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into());
+            // we iterate over all objects in the heap
+            for idx in 0..self.free {
+                // if it is marked,
+                if self.is_marked(idx.into()) {
+                    // set its forwarding address equal to free
+                    self.set_forwarding_address(idx.into(), free.into());
+                    // then bump free by the object's size
+                    free += 1;
+                    if free > self.committed_memory.len() {
+                        return Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into());
+                    }
                 }
             }
         }
 
+        // 2. the next step is to update object references
         {
-            // now we update object references
-            //
-            //
-            // for every marked parent
-            for &node in &marked_node_pointers {
-                //   for every child of the marked node
-                for i in 0..self.get_mut(node).unwrap().children.len() {
-                    let child_node_pointer = self.get(node).unwrap().children[i];
-                    //  get the actual child_node's forwarding address
-                    let forwarding_address = self
-                        .get(child_node_pointer)
-                        .unwrap()
-                        .forwarding_address
-                        .unwrap();
+            // for every marked parent, set the parent's references to the
+            // child's forwarding address
+            for idx in 0..self.free {
+                if self.is_marked(idx.into()) {
+                    let node = NodePointer::from(idx);
 
-                    //  then set the child_node to child node's forwarding address
-                    self.get_mut(node).unwrap().children[i] = forwarding_address;
+                    //  for every child that the marked parent node holds
+                    for i in 0..self.get_mut(node).unwrap().children.len() {
+                        let child_node_pointer = self.get(node).unwrap().children[i];
+
+                        // get the child node's forwarding address
+                        let forwarding_address = self
+                            .get(child_node_pointer)
+                            .unwrap()
+                            .forwarding_address
+                            .unwrap();
+
+                        // then update the parent's reference to the child's forwarding address
+                        self.get_mut(node).unwrap().children[i] = forwarding_address;
+                    }
                 }
             }
         }
-        // println!("cool");
 
+        // 3. actually move the objects
         {
-            // actually move the objects
-            //   for every marked node
-            for node in marked_node_pointers {
-                let forwarding_address = self.get(node).unwrap().forwarding_address.unwrap();
-                self.get_mut(node).unwrap().forwarding_address = None;
-                // swap node's current position with node's forwarding position,
-                // as long as they're not already in the right palce
-                if usize::from(forwarding_address) != usize::from(node) {
-                    self.committed_memory
-                        .swap(usize::from(node), usize::from(forwarding_address));
+            //  for every marked node
+            for idx in 0..self.free {
+                if self.is_marked(idx.into()) {
+                    let node = NodePointer::from(idx);
+
+                    // unset the forwarding address of the object that's about
+                    // to be moved, consequently unmarking it for the next
+                    // collection cycle
+                    let forwarding_address = self.get(node).unwrap().forwarding_address.unwrap();
+                    self.get_mut(node).unwrap().forwarding_address = None;
+
+                    // swap node's current position with node's forwarding
+                    // position...  but only if they're not already in the right
+                    // place! This is an advantage of mark-compact over stop
+                    // copy
+                    if usize::from(forwarding_address) != usize::from(node) {
+                        self.committed_memory
+                            .swap(usize::from(node), usize::from(forwarding_address));
+                    }
                 }
             }
         }
+        // set our new free pointer to the compacted point
         self.free = free;
         Ok(())
     }
@@ -175,5 +188,24 @@ impl MemoryManager for MarkCompactHeap {
     #[inline(always)]
     fn free(&self) -> usize {
         self.free
+    }
+}
+
+impl MarkCompactHeap {
+    #[inline]
+    fn is_marked(&self, node_pointer: NodePointer) -> bool {
+        self.get(node_pointer).unwrap().forwarding_address.is_some()
+    }
+    #[inline]
+    fn mark(&mut self, node_pointer: NodePointer) {
+        self.get_mut(node_pointer).unwrap().forwarding_address = Some(NodePointer::default());
+    }
+    #[inline]
+    fn set_forwarding_address(
+        &mut self,
+        node_pointer: NodePointer,
+        forwarding_address: NodePointer,
+    ) {
+        self.get_mut(node_pointer).unwrap().forwarding_address = Some(forwarding_address);
     }
 }
