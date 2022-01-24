@@ -8,33 +8,31 @@
 
 \section{Research Question}
 
-How does the performance of a Cheney stop-and-copy algorithm compare to a LISP 2 mark-compact algorithm in collecting garbage in a program? \cite{build_your_own_openjdk_gc}
+How does the runtime and collection performance of Cheney's stop-and-copy algorithm compare to the LISP 2 mark-compact algorithm?
 
 \section{Introduction}
 
-Garbage collectors, and the algorithms they use, are incredibly widespread in just about any application in modern day.
+Garbage collectors, and the algorithms they use, are incredibly widespread in just about any application one can find in the modern day. 
 
-Higher level programming languages are a staple in the modern day. Javascript is the sole programming language of the web, and drives the functionality of all webpages. Python, the most popular programming language of today, still increasing in popularity over time and a language for first learners, Java, a still very popular programming language encodes Minecraft, one of the most popular games of the world, played by millions, and is used in tons of server-side applications worldwide.
+One example of these are higher-level programming languages. Javascript is the sole programming language of the web, and drives the functionality of all webpages. Python is the most popular and rising programming language of today and drives artificial intelligence development. Java, a still very popular programming language encodes Minecraft, one of the most popular games of the world, played by millions, and is used in tons of server-side applications worldwide.
 
 The element that these programming languages all have in common is that they are interpreted languages, and they automatically manage memory, by using garbage collectors.
 
-It thus follows that the algorithms behind garbage collection and their relative efficiencies are ever more important to consider, now that more interpreted languages are being run on more and more devices over time. Some recent studies on this subject have explored the power usages between different languages running the same program \cite{programming_languages_electricity}, comparing interpreted languages such as Java and Python with manually managed languages such as C++ and Rust, however, the results didn't specifically test garbage collection algorithms specifically, and as each language implements its own unique garbage collection algorithm with its own unique design decisions among other things, it's hard to say if one base garbage collection algorithm is better than the other using these results alone.
+It thus follows that the algorithms behind garbage collection and their relative efficiencies are ever more important to consider, now that more interpreted languages are being run on more and more devices over time. One recent study on this subject has explored the performance differences between different languages running the same program \cite{programming_languages_electricity}, comparing interpreted languages such as Java and Python with manually managed languages such as C++ and Rust. However, the results didn't specifically test garbage collection algorithms specifically, and as each language implements and makes its own tweaks to its own unique garbage collection algorithm, it's hard to say if one base garbage collection algorithm is better than the other using these results alone.
 
-Other contemporary research on the subject has become increasingly complex, factoring in new algorithms, however, many assume the basic algorithms as known information, and haven't tested simple algorithms on modern hardware. This paper aims to shed light on the essential component of higher level languages that many programmers tend to look over, presenting information in an easily digestible way, as well as applying that knowledge practically by implementing a simple stop-and-copy and mark-compact garbage collection algorithm in the same programming language in an abstracted way, and comparing the performance of the two in this controlled environment.
+Other contemporary research on the subject has become increasingly complex, factoring in new algorithms or combining old algorithms, however, many assume the basic algorithms as known information, and haven't tested simple algorithms on modern hardware. This paper aims to shed light on the essential component of higher level languages that many programmers tend to look over, presenting information in an easily digestible way, as well as applying that knowledge practically by implementing a simple stop-and-copy and mark-compact garbage collection algorithm in the same programming language in an abstracted way, and comparing the performance of the two in this controlled environment.
 
 \subsection{Methodology}
 
-I will first do background research on basic terminology concerning memory management.
+To fully compare and contrast the differences between these two algorithms, as well as to make educated analysis of the results later, a basic understanding of how memory works in a program, the basic terminology concerning memory management, and what garbage is needs to be researched and understood. 
 
-Then I will research how the two garbage collection algorithms are implemented, while attempting to create my own abstractions of the two algorithms in the Rust programming language.
+Then research will be done on the basic steps in each algorithm: including when garbage collection is run, how live objects are determined, and what objects are moved where during the compaction process of each algorithm. This will be accompanied by code snippets of how the algorithms are implemented in this paper in the Rust programming language. 
 
-I will then do research on the software and hardware factors in modern computers that garbage collection could have an effect on, including, but not limited to memory layout and algorithms that access the memory.
+Next, the collection performance of each algorithm (how long it takes to clean up the garbage) as well as the runtime performance of each algorithm, (such as accessing the data structure and its values during a traversal of the memory) will be tested and the results recorded.
 
-I will then consult 3 major papers that have compared the performances of these algorithms with others in the past.
+Finally, research will be done on the basics of hardware caches and organization of memory in modern systems, as one algorithm or another due to its compaction process could support a faster runtime of the program after collection of garbage, and this information will be used to critically analyze the results of the performance of the two algorithms.
 
-I will then compare these views and add my own hypothesis on how the performance of the two algorithms might differ.
-
-Finally, I will test both the collection performance of each algorithm (how long it takes to clean up the garbage) as well as the runtime performance of each algorithm, (such as accessing the data structure and its values during a traversal of the memory) using two separate tests.
+I will then do research on the software and hardware factors in modern computers that garbage collection could have an effect on, including memory layout and algorithms that access the memory, and use this information to critically analyze the results of the performance of the two algorithms.
 
 \section{Background}
 
@@ -383,9 +381,24 @@ To measure the collection performance, garbage will be generated in a graph of o
 
 To generate the testing data, the custom abstraction of a garbage collected data structure will be used \cite{youtube_introductory_video}. A dead simple binary tree will be filled with a predetermined number of \(1,000,000\) objects. Every node is first pushed to the end of the free space on the vector, and children are added as indices, which are an abstraction of pointers. Each node will have two children until the leaf nodes of the tree are reached. 
 
-Then, a seeded random number generator will be used to link \(500,000\) random objects from the first half of the tree to \(500,000\) random objects in the latter half of the tree (via adding their indices as children). Finally, a number of children will be removed from a range of parents in the tree, which will generate garbage (the number of removed nodes will be shown in the data below). 
+Then, a seeded random number generator will be used to link \(500,000\) random objects from the first half of the tree to \(500,000\) random objects in the latter half of the tree (via adding their indices as children).
 
-There will be two sets of data, one with a lot of children 
+Finally, a number of children will be removed from a range of parents in the tree, which will generate garbage: there will be two sets of data, one with a large number of live objects remaining after the garbage collection, and one with a smaller number of live objects remaining (the number of removed nodes will be shown in the data below). 
+
+The testing framework used in this will be the \verb+criterion+ crate in Rust, which automatically runs each function for a set amount of time in the beginning to ``normalize'' the caches, which is especially important \cite{a_unified_theory_of_garbage_collection} for the comparison of garbage collection algorithms, as the way objects are arranged in memory will affect the layout of objects in the cache, which is important to keep consistent. It also determines the number of tests to run and takes the average of all of them, the information of which will be presented in the data below.
+
+\section{Conclusion}
+\subsection{Areas of Error}
+
+Though, it should be noted that the data structure used to represent the objects, the way the objects were linked, and the values that the objects held are all very specific things that could lead to a couple biases for one algorithm or another based off these things alone.
+
+A tree with links here and there is one type of data structure. 
+
+Another shortcoming is that heaps are acted on for a long period of time. Especially for the stop-and-copy algorithm: in the first iteration it's runtime performance was almost just as good as mark-compact and it had a \verb+collect()+ speed that was twice as fast.
+
+Another thing was the fact that the "marking bitmap" the mark-compact algorithm algorithm used required regeneration everytime garbage needed to be collected. No universal implementation of the marking bitmap was found for the LISP-2 style mark compact algorithm. The specific implmentation in this paper chose to use the builtin langauge quicksort 3 algorithm to order the indices after marking. This could've introduced a confounding variable, since if sorting algorithms were used with a higher time complexity the stop-and-copy algorithm would've been observed to be faster.
+
+
 
 % What is the mutator again?
 % Revise images

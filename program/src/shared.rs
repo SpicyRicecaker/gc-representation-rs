@@ -47,13 +47,26 @@ impl Stack {
     // TODO bugged, because with multiple roots pointing to something on the
     // heap we would traverse over it again. However, we only have 1 root on the
     // heap so it doesn't currently matter.
-    pub fn sum<T: MemoryManager>(&self, heap: &T) -> Result<u64> {
+    #[inline]
+    pub fn sum_bfs<T: MemoryManager>(&self, heap: &T) -> Result<u64> {
         // for each root
         let mut sum = 0;
         for root in &self.roots {
             // aggregate the dump of all children in roots
             for child in &root.children {
-                sum += heap.sum(*child)?;
+                sum += heap.sum_bfs(*child)?;
+            }
+        }
+        Ok(sum)
+    }
+    #[inline]
+    pub fn sum_dfs<T: MemoryManager>(&self, heap: &T) -> Result<u64> {
+        // for each root
+        let mut sum = 0;
+        for root in &self.roots {
+            // aggregate the dump of all children in roots
+            for child in &root.children {
+                sum += heap.sum_dfs(*child)?;
             }
         }
         Ok(sum)
@@ -107,7 +120,8 @@ pub trait MemoryManager {
         }
         Ok(elements.join(", "))
     }
-    fn sum(&self, node_pointer: NodePointer) -> Result<u64> {
+    #[inline]
+    fn sum_bfs(&self, node_pointer: NodePointer) -> Result<u64> {
         let mut sum = 0;
 
         let mut visited: HashSet<NodePointer> = HashSet::new();
@@ -125,6 +139,29 @@ pub trait MemoryManager {
                 }
                 for child in &node.children {
                     worklist.push_back(*child);
+                }
+            }
+        }
+        Ok(sum)
+    }
+    #[inline]
+    fn sum_dfs(&self, node_pointer: NodePointer) -> Result<u64> {
+        let mut sum = 0;
+
+        let mut visited: HashSet<NodePointer> = HashSet::new();
+
+        let mut worklist: Vec<NodePointer> = vec![node_pointer];
+
+        while let Some(node_pointer) = worklist.pop() {
+            if !visited.contains(&node_pointer) {
+                visited.insert(node_pointer);
+
+                let node = self.get(node_pointer).unwrap();
+                if let Some(value) = node.value {
+                    sum += value as u64;
+                }
+                for child in &node.children {
+                    worklist.push(*child);
                 }
             }
         }

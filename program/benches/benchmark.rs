@@ -2,8 +2,8 @@ use criterion::{criterion_group, criterion_main, Criterion};
 
 use gc_representation_rs::shared::{MemoryManager, Stack};
 
-use gc_representation_rs::{mark_compact::*, get_heap_boring, get_heap};
 use gc_representation_rs::stop_copy::StopAndCopyHeap;
+use gc_representation_rs::{get_heap, get_heap_boring, mark_compact::*};
 
 use std::env;
 
@@ -29,7 +29,7 @@ fn mark_compact_random_benchmark(c: &mut Criterion) {
         )
     });
 
-    c.bench_function("traverse mark compact", |b| b.iter(|| stack.sum(&heap)));
+    c.bench_function("traverse mark compact", |b| b.iter(|| stack.sum_bfs(&heap)));
 
     stack.roots[0].children.pop();
     collect(&mut stack, &mut heap);
@@ -45,7 +45,11 @@ fn mark_compact_random_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("[full clear] traverse mark compact", |b| {
-        b.iter(|| stack.sum(&heap))
+        b.iter(|| stack.sum_bfs(&heap))
+    });
+
+    c.bench_function("[full clear] traverse mark compact (depth first)", |b| {
+        b.iter(|| stack.sum_dfs(&heap))
     });
 }
 
@@ -67,7 +71,9 @@ fn stop_and_copy_random_benchmark(c: &mut Criterion) {
         )
     });
 
-    c.bench_function("traverse stop and copy", |b| b.iter(|| stack.sum(&heap)));
+    c.bench_function("traverse stop and copy", |b| {
+        b.iter(|| stack.sum_bfs(&heap))
+    });
 
     stack.roots[0].children.pop(); // collect(&mut stack, &mut heap);
     collect(&mut stack, &mut heap);
@@ -83,7 +89,11 @@ fn stop_and_copy_random_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("[full clear] traverse stop copy", |b| {
-        b.iter(|| stack.sum(&heap))
+        b.iter(|| stack.sum_bfs(&heap))
+    });
+
+    c.bench_function("[full clear] traverse stop copy (depth first)", |b| {
+        b.iter(|| stack.sum_dfs(&heap))
     });
 }
 

@@ -121,7 +121,7 @@ fn sum_garbage_collection<T: MemoryManager>(
     // 0, 1..., 8, 9
     recursively_add_children(node_pointer, heap_size - 1, stack, heap).unwrap();
     // the sum of all points should be 45
-    assert_eq!(stack.sum(heap).unwrap(), 45);
+    assert_eq!(stack.sum_bfs(heap).unwrap(), 45);
     // also add some cyclic data structures
     heap.get_mut(NodePointer::from(heap_size - 1))
         .unwrap()
@@ -129,7 +129,7 @@ fn sum_garbage_collection<T: MemoryManager>(
         .push(NodePointer::from(0));
     dbg!(stack.dump_all(heap).unwrap());
     // check again
-    assert_eq!(stack.sum(heap).unwrap(), 45);
+    assert_eq!(stack.sum_bfs(heap).unwrap(), 45);
 
     Ok(())
 }

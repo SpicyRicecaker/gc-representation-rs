@@ -1,6 +1,5 @@
 // use crate::{recursively_add_children, seed_root};
 
-
 use crate::{get_heap, get_heap_boring};
 
 use super::*;
@@ -22,6 +21,8 @@ fn metric() -> Result<()> {
             "mark compact heap with lots of children leftover: {:#?}",
             stack.count(&heap).unwrap()
         );
+        assert_eq!(stack.sum_bfs(&heap).unwrap(), stack.sum_dfs(&heap).unwrap());
+        println!("summation of bfs is equal to summation of dfs");
     }
     {
         const STACK_SIZE: usize = 1;
