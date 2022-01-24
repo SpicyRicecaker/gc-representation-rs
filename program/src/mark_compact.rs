@@ -57,7 +57,7 @@ impl MemoryManager for MarkCompactHeap {
         Ok(node_pointer)
     }
 
-    /// mark-compact algorithm
+    // mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<()> {
         log::debug!("exceeded heap size! now calling collect function for mark_compact");
 
@@ -87,8 +87,8 @@ impl MemoryManager for MarkCompactHeap {
                 }
             }
         }
-        // now all our reachable objects should be marked, everything that isn't is considered garbo
-        // we only care about the marked objects from now on
+        // now all our reachable objects should be marked, everything that isn't
+        // is considered garbo we only care about the marked objects from now on
 
         // log::trace!(
         //     "marked_node_pointers is this long: {}",
