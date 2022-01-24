@@ -381,8 +381,36 @@ Finally, a number of children will be removed from a range of parents in the tre
 
 The testing framework used in this will be the \verb+criterion+ crate in Rust, which automatically runs each function for a set amount of time in the beginning to ``normalize'' the caches, which is especially important \cite{a_unified_theory_of_garbage_collection} for the comparison of garbage collection algorithms, as the way objects are arranged in memory will affect the layout of objects in the cache, which is important to keep consistent. It also determines the number of tests to run and takes the average of all of them, the information of which will be presented in the data below.
 
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pics/collect-perf.pdf}
+    \caption{Graph showing collection performance}
+\end{figure}
+
+Initially, with little garbage in a collection cycle, the collection performance using the LISP 2 algorithm is nearly equivalent to Cheney's algorithm, despite the LISP 2 algorithm having to traverse the heap 3 times in total, 2 times more than Cheney's algorithm. This lack of expected performance on the stop-and-copy's collectors part might be due to the fact that every single live object (that is, \(93.4\%\) of the remaining heap) must be copied into \verb+to_space+, regardless of its current position. Whereas, for the mark-compact algorithm, if objects are already in place, they do not have to be copied again. Intuitively, copying memory around is fairly expensive. In this case, the performance difference is definitely due to this balance of copying versus traversing performance. 
+
+Surprisingly though, when the heap is mostly made of garbage, the stop-copy collector begins to perform worse than the mark-compact collector. This partially doesn't make sense, because the way that the mark-compact collector is implemented, it should still be traversing through the entire heap 3 times through all the dead objects, while the stop-copy collector would only have to iterate through the live objects, so further research is needed on this area to confirm if this is due to an implementation detail in the program or if there is a reasonable explanation for this phoenomenon.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pics/traverse-bfs-perf.pdf}
+    \caption{Graph showing runtime performance via bfs traversal}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pics/traverse-dfs-perf.pdf}
+    \caption{Graph showing runtime via dfs traversal}
+\end{figure}
 \section{Conclusion}
 \subsection{Areas of Error}
+
+The graphs describing the runtime performance of the two algorithms show that when there is only a small amount of garbage in a collection cycle, the runtime performance remains practically unchanged. This makes sense for the mark-compact algorithm, because the order of objects is maintained after a compaction, but also for Cheney's algorithm, because, despite the fact that the algorithm does not gurantee that the order of objects be maintained, because of the small number of deletions, as data was inserted in the form of a binary tree where each child node was allocated bread-first into the node, the way the stop-copy algorithm copies the objects mimics that insertion and thus the speed is mostly maintained. 
+
+However, after a garbage collection cycle removes most of the garbage, the data shows that there becomes a huge performance gap between the mark-compact and stop-copy collector, with the mark-compact compacted objects being traversed almost an order of magnitude faster. 
+
+This is most likely due to the fact that after a compaction, the order of nodes becomes jumbled with the stop-copy collector, however, 
+
 
 Though, it should be noted that the data structure used to represent the objects, the way the objects were linked, and the values that the objects held are all very specific things that could lead to a couple biases for one algorithm or another based off these things alone.
 

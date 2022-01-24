@@ -30,6 +30,9 @@ fn mark_compact_random_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("traverse mark compact", |b| b.iter(|| stack.sum_bfs(&heap)));
+    c.bench_function("traverse mark compact (depth first)", |b| {
+        b.iter(|| stack.sum_dfs(&heap))
+    });
 
     stack.roots[0].children.pop();
     collect(&mut stack, &mut heap);
@@ -73,6 +76,9 @@ fn stop_and_copy_random_benchmark(c: &mut Criterion) {
 
     c.bench_function("traverse stop and copy", |b| {
         b.iter(|| stack.sum_bfs(&heap))
+    });
+    c.bench_function("traverse stop and copy", |b| {
+        b.iter(|| stack.sum_dfs(&heap))
     });
 
     stack.roots[0].children.pop(); // collect(&mut stack, &mut heap);
