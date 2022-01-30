@@ -11,7 +11,7 @@ cargo install cargo-criterion
 git clone https://github.com/SpicyRicecaker/gc-representation-rs
 cd program
 # Set heap_size to 1000000
-HEAP_SIZE=1000000 cargo criterion
+HEAP_SIZE=1000000 cargo criterion --message-format=json
 ```
 
 ## Results 
