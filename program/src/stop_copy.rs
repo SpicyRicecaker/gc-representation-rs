@@ -153,6 +153,10 @@ impl MemoryManager for StopAndCopyHeap {
         // `free` on stop-and-copy should be subtracted by to space
         self.free - self.to_space
     }
+
+    fn heap_size(&self) -> usize {
+        self.extent
+    }
 }
 
 impl StopAndCopyHeap {

@@ -97,6 +97,7 @@ pub trait MemoryManager {
     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
     fn free(&self) -> usize;
+    fn heap_size(&self) -> usize;
     fn dump(&self, node_pointer: NodePointer) -> Result<String> {
         let mut elements = Vec::new();
 

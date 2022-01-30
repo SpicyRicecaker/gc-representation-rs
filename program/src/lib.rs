@@ -121,12 +121,11 @@ pub fn seed_root<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<No
 pub fn make_garbage<T: MemoryManager + Clone>(
     stack: &mut Stack,
     heap: &mut T,
-    heap_size: usize,
     garbage_ratio: f32,
 ) -> Result<()> {
     let mut rng = Pcg64::seed_from_u64(1234);
 
-    let layers = (1. + heap_size as f32).log2().floor() as u32;
+    let layers = (1. + heap.heap_size() as f32).log2().floor() as u32;
 
     let low = layers - 7;
     let high = layers - 5;
@@ -167,24 +166,23 @@ pub fn make_garbage<T: MemoryManager + Clone>(
 pub fn link_heap<T: MemoryManager>(
     stack: &mut Stack,
     heap: &mut T,
-    heap_size: usize,
 ) -> Result<()> {
     // get number of powers of two (so we can know how many layers of binary
     // tree there are)
 
     {
         let child_node_pointer = seed_root(stack, heap).unwrap();
-        recursively_add_children(child_node_pointer, heap_size - 1, stack, heap).unwrap();
+        recursively_add_children(child_node_pointer, heap.heap_size() - 1, stack, heap).unwrap();
     }
 
     // create number of links equal to number of nodes, randomly from anywhere to anywhere
     let mut rng = Pcg64::seed_from_u64(1234);
     {
-        for _ in 0..heap_size {
+        for _ in 0..heap.heap_size() {
             // generate two random numbers
             let (first, second) = (
-                rng.gen_range(0..heap_size),
-                rng.gen_range(heap_size / 2..heap_size),
+                rng.gen_range(0..heap.heap_size()),
+                rng.gen_range(heap.heap_size() / 2..heap.heap_size()),
             );
             // link child before point of removal to parent
             heap.get_mut(NodePointer::from(first))

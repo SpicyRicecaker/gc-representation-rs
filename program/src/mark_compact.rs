@@ -189,6 +189,10 @@ impl MemoryManager for MarkCompactHeap {
     fn free(&self) -> usize {
         self.free
     }
+
+    fn heap_size(&self) -> usize {
+        self.committed_memory.len()
+    }
 }
 
 impl MarkCompactHeap {

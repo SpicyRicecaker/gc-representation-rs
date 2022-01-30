@@ -17,8 +17,8 @@ fn bfs_dfs() -> Result<()> {
         let mut heap = MarkCompactHeap::init(heap_size);
 
         // now initialize the heap one way
-        link_heap(&mut stack, &mut heap, heap_size).unwrap();
-        make_garbage(&mut stack, &mut heap, heap_size, 0.2).unwrap();
+        link_heap(&mut stack, &mut heap).unwrap();
+        make_garbage(&mut stack, &mut heap, 0.2).unwrap();
         // println!(
         //     "mark compact: {:#?} (nodes/connections)",
         //     stack.count(&heap).unwrap()
@@ -37,8 +37,8 @@ fn bfs_dfs() -> Result<()> {
         let mut heap = MarkCompactHeap::init(heap_size);
 
         // now initialize the heap one way
-        link_heap(&mut stack, &mut heap, heap_size / 2).unwrap();
-        make_garbage(&mut stack, &mut heap, heap_size / 2, 0.2).unwrap();
+        link_heap(&mut stack, &mut heap).unwrap();
+        make_garbage(&mut stack, &mut heap, 0.2).unwrap();
         // println!(
         //     "stop and copy heap with lots of children leftover: {:#?}",
         //     stack.count(&heap).unwrap()
@@ -75,8 +75,8 @@ fn metrics() -> Result<()> {
             let mut stack = m_stack.clone();
             let mut heap = m_heap.clone();
             // now initialize the heap one way
-            link_heap(&mut stack, &mut heap, m_heap_size).unwrap();
-            make_garbage(&mut stack, &mut heap, m_heap_size, ratio).unwrap();
+            link_heap(&mut stack, &mut heap).unwrap();
+            make_garbage(&mut stack, &mut heap, ratio).unwrap();
             println!(
                 "expected dead to live ratio: {}\nactual ratio: {:.3}",
                 ratio,
