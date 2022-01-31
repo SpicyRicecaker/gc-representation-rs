@@ -80,7 +80,7 @@ impl MemoryManager for StopAndCopyHeap {
             // literally std::mem swap them. They're both locations, neither is size
             // println!("{:?}", self.committed_memory);
             // println!("to space before swap {} {}", self.to_space, self.from_space);
-            trace!("before swapping the heap, self.top (maxiumum of whatever is fromspace) is {}, self.from_space is {}, self.to_space is {}, and self.free is {}", self.top, self.from_space, self.to_space, self.free);
+            // trace!("before swapping the heap, self.top (maxiumum of whatever is fromspace) is {}, self.from_space is {}, self.to_space is {}, and self.free is {}", self.top, self.from_space, self.to_space, self.free);
             std::mem::swap(&mut self.from_space, &mut self.to_space);
             // set free to be at the bot of the new to_space
             self.free = self.to_space;
@@ -90,7 +90,7 @@ impl MemoryManager for StopAndCopyHeap {
             // println!("to space after swap {} {}", self.to_space, self.from_space);
             // set our free pointer to the new space
             // self.free = self.to_space;
-            trace!("after swapping the heap, self.top (maxiumum of whatever is fromspace) is {}, self.from_space is {}, self.to_space is {}, and self.free is {}", self.top, self.from_space, self.to_space, self.free);
+            // trace!("after swapping the heap, self.top (maxiumum of whatever is fromspace) is {}, self.from_space is {}, self.to_space is {}, and self.free is {}", self.top, self.from_space, self.to_space, self.free);
         }
         // the scan also starts from the beginning of the to_space
         let mut scan = self.free;

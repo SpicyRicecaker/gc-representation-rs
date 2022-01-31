@@ -183,11 +183,11 @@ pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T, rng: &mut Pc
                 rng.gen_range(heap.heap_size() / 2..heap.heap_size()),
             );
             // link child before point of removal to parent
-            let (first, second) = (heap.node_pointer_from_usize(first), heap.node_pointer_from_usize(second));
-            heap.get_mut(first)
-                .unwrap()
-                .children
-                .push(second);
+            let (first, second) = (
+                heap.node_pointer_from_usize(first),
+                heap.node_pointer_from_usize(second),
+            );
+            heap.get_mut(first).unwrap().children.push(second);
         }
     }
     // run gc

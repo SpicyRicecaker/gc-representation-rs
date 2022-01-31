@@ -1,7 +1,7 @@
 // use crate::{recursively_add_children, seed_root};
 
-use rand_pcg::Pcg64;
 use rand::prelude::*;
+use rand_pcg::Pcg64;
 
 use crate::{link_heap, make_garbage};
 

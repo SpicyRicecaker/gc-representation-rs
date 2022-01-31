@@ -215,5 +215,4 @@ impl MarkCompactHeap {
     ) {
         self.get_mut(node_pointer).unwrap().forwarding_address = Some(forwarding_address);
     }
-
 }
