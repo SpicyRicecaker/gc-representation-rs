@@ -136,8 +136,8 @@ fn random_benchmark(
             |b, _ratio| {
                 b.iter_batched(
                     || {
-                        let mut stack = m_stack.clone();
-                        let mut heap = m_heap.clone();
+                        let mut stack = s_stack.clone();
+                        let mut heap = s_heap.clone();
 
                         make_garbage(&mut stack, &mut heap, *size, &mut rng.clone()).unwrap();
 
@@ -191,8 +191,8 @@ fn random_benchmark(
     for (size, ratio) in input_data.iter() {
         {
             // clone the stack and heap (necessary)
-            let mut stack = s_stack.clone();
-            let mut heap = s_heap.clone();
+            let mut stack = m_stack.clone();
+            let mut heap = m_heap.clone();
 
             // create our own garbage from the heap that should already be linked
             make_garbage(&mut stack, &mut heap, *size, &mut rng.clone()).unwrap();
