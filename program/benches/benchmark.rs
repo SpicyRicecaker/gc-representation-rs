@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use gc_representation_rs::shared::{MemoryManager, Stack};
 
@@ -68,7 +68,7 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
         // pick any algorithm from mark compact
         if let MemoryType::MarkCompact(mark_compact_memory) = &memory_types[0] {
             let mut stack = mark_compact_memory.stack.clone();
-            let mut heap = mark_compact_memory.heap.clone().clone();
+            let mut heap = mark_compact_memory.heap.clone();
 
             // dead to live ratio
             make_garbage(&mut stack, &mut heap, *size).unwrap();

@@ -7,7 +7,7 @@ use super::*;
 #[test]
 fn bfs_dfs() -> Result<()> {
     // first test mark compact, heap
-    let mut res = None;
+    let res;
     {
         const STACK_SIZE: usize = 1;
         let heap_size: usize = 1_000_000;
@@ -83,18 +83,18 @@ fn metrics() -> Result<()> {
                 1. - stack.count(&heap).unwrap().0 as f32 / m_heap_size as f32,
             );
         }
-        // {
-        //     let mut stack = s_stack.clone();
-        //     let mut heap = s_heap.clone();
-        //     // now initialize the heap one way
-        //     link_heap(&mut stack, &mut heap, s_heap_size / 2).unwrap();
-        //     make_garbage(&mut stack, &mut heap, s_heap_size / 2, ratio).unwrap();
-        //     println!(
-        //         "mark_compact: expected dead to live ratio: {}\nactual ratio: {:.3}",
-        //         ratio,
-        //         1. - stack.count(&heap).unwrap().0 as f32 / (s_heap_size / 2) as f32,
-        //     );
-        // }
+        {
+            let mut stack = s_stack.clone();
+            let mut heap = s_heap.clone();
+            // now initialize the heap one way
+            link_heap(&mut stack, &mut heap).unwrap();
+            make_garbage(&mut stack, &mut heap, ratio).unwrap();
+            println!(
+                "mark_compact: expected dead to live ratio: {}\nactual ratio: {:.3}",
+                ratio,
+                1. - stack.count(&heap).unwrap().0 as f32 / (s_heap_size / 2) as f32,
+            );
+        }
     }
     Ok(())
 }

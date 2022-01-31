@@ -119,7 +119,7 @@ pub fn seed_root<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<No
 /// takes in a reference to stack and heap, and returns a clone deleted with
 /// specification to the ratio included
 pub fn make_garbage<T: MemoryManager + Clone>(
-    stack: &mut Stack,
+    _stack: &mut Stack,
     heap: &mut T,
     garbage_ratio: f32,
 ) -> Result<()> {
@@ -163,10 +163,7 @@ pub fn make_garbage<T: MemoryManager + Clone>(
 
 /// takes in a mutable reference to stack and heap, linking them to a ratio of
 /// around 2 edges to : 1 node?
-pub fn link_heap<T: MemoryManager>(
-    stack: &mut Stack,
-    heap: &mut T,
-) -> Result<()> {
+pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<()> {
     // get number of powers of two (so we can know how many layers of binary
     // tree there are)
 
