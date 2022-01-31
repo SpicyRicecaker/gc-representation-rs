@@ -1,6 +1,8 @@
 use crate::{init_log, recursively_add_children, seed_root};
 
 use super::*;
+use rand_pcg::Pcg64;
+use rand::prelude::*;
 
 fn actual_garbage_collection<T: MemoryManager>(
     stack: &mut Stack,
@@ -125,4 +127,30 @@ fn stop_and_copy_actual() {
     let mut heap = StopAndCopyHeap::init(HEAP_SIZE);
 
     actual_garbage_collection(&mut stack, &mut heap, HEAP_SIZE / 2).unwrap();
+}
+
+#[test]
+fn test_rng_behavior(){
+    let mut rng = Pcg64::seed_from_u64(1234);
+
+    // generate two numbers
+    rng.next_u64();
+    rng.next_u64();
+
+    // create clone
+    let mut rng_clone = rng.clone();
+
+    dbg!(rng.next_u64(), rng_clone.next_u64());
+    assert_eq!(rng.next_u64(), rng_clone.next_u64());
+
+    // now pass mut clone into another func
+    rng.next_u64();
+    do_stuff(&mut rng_clone.clone(), rng_clone.next_u64());
+
+    dbg!(rng.next_u64(), rng_clone.next_u64());
+    assert_eq!(rng.next_u64(), rng_clone.next_u64());
+}
+
+fn do_stuff(rng: &mut Pcg64, num: u64) {
+    assert_eq!(rng.next_u64(), num);
 }

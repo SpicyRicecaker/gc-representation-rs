@@ -1,5 +1,8 @@
 // use crate::{recursively_add_children, seed_root};
 
+use rand_pcg::Pcg64;
+use rand::prelude::*;
+
 use crate::{link_heap, make_garbage};
 
 use super::*;
@@ -16,9 +19,10 @@ fn bfs_dfs() -> Result<()> {
         // initializing the heap
         let mut heap = MarkCompactHeap::init(heap_size);
 
+        let mut rng = Pcg64::seed_from_u64(1234);
         // now initialize the heap one way
-        link_heap(&mut stack, &mut heap).unwrap();
-        make_garbage(&mut stack, &mut heap, 0.2).unwrap();
+        link_heap(&mut stack, &mut heap, &mut rng).unwrap();
+        make_garbage(&mut stack, &mut heap, 0.2, &mut rng).unwrap();
         // println!(
         //     "mark compact: {:#?} (nodes/connections)",
         //     stack.count(&heap).unwrap()
@@ -37,8 +41,10 @@ fn bfs_dfs() -> Result<()> {
         let mut heap = StopAndCopyHeap::init(heap_size);
 
         // now initialize the heap one way
-        link_heap(&mut stack, &mut heap).unwrap();
-        make_garbage(&mut stack, &mut heap, 0.2).unwrap();
+        let mut rng = Pcg64::seed_from_u64(1234);
+        // now initialize the heap one way
+        link_heap(&mut stack, &mut heap, &mut rng).unwrap();
+        make_garbage(&mut stack, &mut heap, 0.2, &mut rng).unwrap();
         // println!(
         //     "stop and copy heap with lots of children leftover: {:#?}",
         //     stack.count(&heap).unwrap()
@@ -75,8 +81,9 @@ fn metrics() -> Result<()> {
             let mut stack = m_stack.clone();
             let mut heap = m_heap.clone();
             // now initialize the heap one way
-            link_heap(&mut stack, &mut heap).unwrap();
-            make_garbage(&mut stack, &mut heap, ratio).unwrap();
+            let mut rng = Pcg64::seed_from_u64(1234);
+            link_heap(&mut stack, &mut heap, &mut rng).unwrap();
+            make_garbage(&mut stack, &mut heap, ratio, &mut rng).unwrap();
             println!(
                 "expected dead to live ratio: {}\nactual ratio: {:.3}",
                 ratio,
@@ -87,8 +94,9 @@ fn metrics() -> Result<()> {
             let mut stack = s_stack.clone();
             let mut heap = s_heap.clone();
             // now initialize the heap one way
-            link_heap(&mut stack, &mut heap).unwrap();
-            make_garbage(&mut stack, &mut heap, ratio).unwrap();
+            let mut rng = Pcg64::seed_from_u64(1234);
+            link_heap(&mut stack, &mut heap, &mut rng).unwrap();
+            make_garbage(&mut stack, &mut heap, ratio, &mut rng).unwrap();
             println!(
                 "mark_compact: expected dead to live ratio: {}\nactual ratio: {:.3}",
                 ratio,

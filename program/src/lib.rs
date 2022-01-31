@@ -122,12 +122,11 @@ pub fn make_garbage<T: MemoryManager + Clone>(
     _stack: &mut Stack,
     heap: &mut T,
     garbage_ratio: f32,
+    rng: &mut Pcg64,
 ) -> Result<()> {
-    let mut rng = Pcg64::seed_from_u64(1234);
-
     let layers = (1. + heap.heap_size() as f32).log2().floor() as u32;
 
-    let low = layers - 9;
+    let low = layers - 7;
     let high = layers - 5;
 
     let lowest_layer = 2_usize.pow(low);
@@ -163,7 +162,7 @@ pub fn make_garbage<T: MemoryManager + Clone>(
 
 /// takes in a mutable reference to stack and heap, linking them to a ratio of
 /// around 2 edges to : 1 node?
-pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<()> {
+pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T, rng: &mut Pcg64) -> Result<()> {
     // get number of powers of two (so we can know how many layers of binary
     // tree there are)
 
@@ -173,7 +172,6 @@ pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T) -> Result<()
     }
 
     // create number of links equal to number of nodes, randomly from anywhere to anywhere
-    let mut rng = Pcg64::seed_from_u64(1234);
     {
         for _ in 0..heap.heap_size() {
             // generate two random numbers
