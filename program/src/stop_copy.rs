@@ -1,5 +1,3 @@
-use log::trace;
-
 use crate::shared::{MemoryManager, Node, NodePointer, Stack};
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
