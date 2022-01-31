@@ -113,7 +113,7 @@ fn random_benchmark(
     dbg!(&input_data);
 
     let mut group = c.benchmark_group(
-        "Time Taken to Collect Garbage with Various Garbage Amounts (Higher is Worse",
+        "Time Taken to Collect Garbage with Various Garbage Amounts (Higher is Worse)",
     );
 
     for (size, ratio) in input_data.iter() {
@@ -214,11 +214,9 @@ fn random_benchmark(
             make_garbage(&mut stack, &mut heap, *size, &mut rng.clone()).unwrap();
             collect(&mut stack, &mut heap);
 
-            group.bench_with_input(
-                BenchmarkId::new("Stop-Copy", ratio),
-                ratio,
-                |b, _ratio| b.iter(|| stack.sum_dfs(&heap)),
-            );
+            group.bench_with_input(BenchmarkId::new("Stop-Copy", ratio), ratio, |b, _ratio| {
+                b.iter(|| stack.sum_dfs(&heap))
+            });
         }
     }
     group.finish();
