@@ -154,7 +154,10 @@ pub fn make_garbage<T: MemoryManager + Clone>(
             // generate two random numbers
             let num = rng.gen_range(lowest_layer..highest_layer);
             // link child before point of removal to parent
-            heap.get_mut(NodePointer::from(num)).unwrap().children.pop();
+            heap.get_mut(heap.node_pointer_from_usize(num))
+                .unwrap()
+                .children
+                .pop();
         }
     }
     Ok(())
@@ -180,10 +183,11 @@ pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T, rng: &mut Pc
                 rng.gen_range(heap.heap_size() / 2..heap.heap_size()),
             );
             // link child before point of removal to parent
-            heap.get_mut(NodePointer::from(first))
+            let (first, second) = (heap.node_pointer_from_usize(first), heap.node_pointer_from_usize(second));
+            heap.get_mut(first)
                 .unwrap()
                 .children
-                .push(NodePointer::from(second));
+                .push(second);
         }
     }
     // run gc

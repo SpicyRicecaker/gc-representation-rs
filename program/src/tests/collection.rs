@@ -41,11 +41,12 @@ fn random_garbage_collection<T: MemoryManager>(
                 rng.gen_range(0..heap.heap_size()),
                 rng.gen_range(heap.heap_size() / 2..heap.heap_size()),
             );
+            let (first, second) = (heap.node_pointer_from_usize(first), heap.node_pointer_from_usize(second));
             // link child before point of removal to parent
-            heap.get_mut(NodePointer::from(first))
+            heap.get_mut(first)
                 .unwrap()
                 .children
-                .push(NodePointer::from(second));
+                .push(second);
         }
     }
     log::info!("time it took to link children: {:#?}", instant.elapsed());
@@ -57,7 +58,10 @@ fn random_garbage_collection<T: MemoryManager>(
             // generate two random numbers
             let num = rng.gen_range(100..10_000);
             // link child before point of removal to parent
-            heap.get_mut(NodePointer::from(num)).unwrap().children.pop();
+            heap.get_mut(heap.node_pointer_from_usize(num))
+                .unwrap()
+                .children
+                .pop();
         }
     }
     log::info!("time it took to remove children: {:#?}", instant.elapsed());
@@ -121,11 +125,12 @@ fn sum_garbage_collection<T: MemoryManager>(
     recursively_add_children(node_pointer, heap_size - 1, stack, heap).unwrap();
     // the sum of all points should be 45
     assert_eq!(stack.sum_bfs(heap).unwrap(), 45);
+    let (start, end) = (heap.node_pointer_from_usize(heap_size - 1), heap.node_pointer_from_usize(0));
     // also add some cyclic data structures
-    heap.get_mut(NodePointer::from(heap_size - 1))
+    heap.get_mut(start)
         .unwrap()
         .children
-        .push(NodePointer::from(0));
+        .push(end);
     dbg!(stack.dump_all(heap).unwrap());
     // check again
     assert_eq!(stack.sum_bfs(heap).unwrap(), 45);

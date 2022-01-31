@@ -1,8 +1,8 @@
 use crate::{init_log, recursively_add_children, seed_root};
 
 use super::*;
-use rand_pcg::Pcg64;
 use rand::prelude::*;
+use rand_pcg::Pcg64;
 
 fn actual_garbage_collection<T: MemoryManager>(
     stack: &mut Stack,
@@ -31,36 +31,26 @@ fn actual_garbage_collection<T: MemoryManager>(
     // let's add some interesting refs from parent to children and children to parent
     // assume that we're removing an object at ~8000
     {
-        // link parent to child after point of removal
-        heap.get_mut(NodePointer::from(100))
-            .unwrap()
-            .children
-            .push(NodePointer::from(16383));
-        // link parent to child before point of removal
-        heap.get_mut(NodePointer::from(100))
-            .unwrap()
-            .children
-            .push(NodePointer::from(300));
-        // link child after point of removal to parent
-        heap.get_mut(NodePointer::from(8191))
-            .unwrap()
-            .children
-            .push(NodePointer::from(500));
-        // link child before point of removal to parent
-        heap.get_mut(NodePointer::from(5000))
-            .unwrap()
-            .children
-            .push(NodePointer::from(400));
-
-        // cyclic data structure that should be removed
-        heap.get_mut(NodePointer::from(9000))
-            .unwrap()
-            .children
-            .push(NodePointer::from(10_000));
-        heap.get_mut(NodePointer::from(10_000))
-            .unwrap()
-            .children
-            .push(NodePointer::from(9000));
+        for (parent, child) in [
+            // link parent to child after point of removal
+            (100, 16383),
+            // link parent to child before point of removal
+            (100, 300),
+            // link child after point of removal to parent
+            (300, 8191),
+            // link child before point of removal to parent
+            (500, 5000),
+            (400, 9000),
+            // cyclic data structure that should be removed
+            (9000, 10_000),
+            (10_000, 9000),
+        ] {
+            let (parent, child) = (
+                heap.node_pointer_from_usize(parent),
+                heap.node_pointer_from_usize(child),
+            );
+            heap.get_mut(parent).unwrap().children.push(child);
+        }
     }
 
     {
@@ -68,9 +58,11 @@ fn actual_garbage_collection<T: MemoryManager>(
         // parent to child
         log::trace!(
             "parent to delete child from from found: {:#?}",
-            heap.get_mut(NodePointer::from(8000)).unwrap().children
+            heap.get(heap.node_pointer_from_usize(8000))
+                .unwrap()
+                .children
         );
-        heap.get_mut(NodePointer::from(8000))
+        heap.get_mut(heap.node_pointer_from_usize(8000))
             .unwrap()
             .children
             .pop();
@@ -130,7 +122,7 @@ fn stop_and_copy_actual() {
 }
 
 #[test]
-fn test_rng_behavior(){
+fn test_rng_behavior() {
     let mut rng = Pcg64::seed_from_u64(1234);
 
     // generate two numbers

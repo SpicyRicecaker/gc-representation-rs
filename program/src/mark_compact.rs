@@ -174,6 +174,11 @@ impl MemoryManager for MarkCompactHeap {
     }
 
     #[inline(always)]
+    fn node_pointer_from_usize(&self, idx: usize) -> NodePointer {
+        NodePointer::from(idx)
+    }
+
+    #[inline(always)]
     fn get(&self, node_pointer: NodePointer) -> Option<&Node> {
         self.committed_memory.get(usize::from(node_pointer))
     }
@@ -210,4 +215,5 @@ impl MarkCompactHeap {
     ) {
         self.get_mut(node_pointer).unwrap().forwarding_address = Some(forwarding_address);
     }
+
 }

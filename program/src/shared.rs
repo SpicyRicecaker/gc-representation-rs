@@ -96,6 +96,7 @@ pub trait MemoryManager {
     // lifetimes
     fn get(&self, node_pointer: NodePointer) -> Option<&Node>;
     fn get_mut(&mut self, node_pointer: NodePointer) -> Option<&mut Node>;
+    fn node_pointer_from_usize(&self, idx: usize) -> NodePointer;
     fn free(&self) -> usize;
     fn heap_size(&self) -> usize;
     fn dump(&self, node_pointer: NodePointer) -> Result<String> {

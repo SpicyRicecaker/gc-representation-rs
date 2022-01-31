@@ -149,6 +149,11 @@ impl MemoryManager for StopAndCopyHeap {
     }
 
     #[inline(always)]
+    fn node_pointer_from_usize(&self, idx: usize) -> NodePointer {
+        NodePointer::from(self.to_space + idx)
+    }
+
+    #[inline(always)]
     fn free(&self) -> usize {
         // `free` on stop-and-copy should be subtracted by to space
         self.free - self.to_space
