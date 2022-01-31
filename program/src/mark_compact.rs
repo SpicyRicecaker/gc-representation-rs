@@ -59,7 +59,7 @@ impl MemoryManager for MarkCompactHeap {
 
     // mark-compact algorithm
     fn collect(&mut self, stack: &mut Stack) -> Result<()> {
-        log::debug!("exceeded heap size! now calling collect function for mark_compact");
+        // log::debug!("exceeded heap size! now calling collect function for mark_compact");
 
         // this block contains the code to mark all reachable objects
         {
@@ -114,9 +114,6 @@ impl MemoryManager for MarkCompactHeap {
                     self.set_forwarding_address(idx.into(), free.into());
                     // then bump free by the object's size
                     free += 1;
-                    if free > self.committed_memory.len() {
-                        return Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into());
-                    }
                 }
             }
         }

@@ -176,7 +176,7 @@ pub fn link_heap<T: MemoryManager>(stack: &mut Stack, heap: &mut T, rng: &mut Pc
         for _ in 0..heap.heap_size() {
             // generate two random numbers
             let (first, second) = (
-                rng.gen_range(0..heap.heap_size()),
+                rng.gen_range(0..(heap.heap_size() / 2)),
                 rng.gen_range(heap.heap_size() / 2..heap.heap_size()),
             );
             // link child before point of removal to parent
