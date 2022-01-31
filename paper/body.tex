@@ -34,48 +34,48 @@ Finally, research will be done on the basics of hardware caches and organization
 
 \section{Background}
 
-\subsection{The concepts of memory management (explained in the context of a game)}
+% \subsection{The concepts of memory management (explained in the context of a game)}
 
-\begin{quote}
-    Imagine a game with multiple enemies. How does one store, add, and remove an enemy?
-\end{quote}
+% \begin{quote}
+%     Imagine a game with multiple enemies. How does one store, add, and remove an enemy?
+% \end{quote}
 
-The above question basically defines memory managment.
+% The above question basically defines memory managment.
 
-One might first believe that a plain vector might take care of managing the enemies.
+% One might first believe that a plain vector might take care of managing the enemies.
 
-\begin{minted}[breaklines]{rust}
-    enemies = [enemy1, enemy2, enemy3]
-\end{minted}
+% \begin{minted}[breaklines]{rust}
+%     enemies = [enemy1, enemy2, enemy3]
+% \end{minted}
 
-Whenever one wants to spawn an enemy, it is \textit{allocated} to the vector
+% Whenever one wants to spawn an enemy, it is \textit{allocated} to the vector
 
-\begin{minted}[breaklines]{rust}
-    enemies.push(enemy4)
-    // enemies = [enemy1, enemy2, enemy3, enemy4]
-\end{minted}
+% \begin{minted}[breaklines]{rust}
+%     enemies.push(enemy4)
+%     // enemies = [enemy1, enemy2, enemy3, enemy4]
+% \end{minted}
 
-And whenever one wants to despawn an enemy, one deallocates it from the vector
+% And whenever one wants to despawn an enemy, one deallocates it from the vector
 
-\begin{minted}[breaklines]{rust}
-    enemies.remove(0)
-    // enemies = [enemy2, enemy3, enemy4]
-\end{minted}
+% \begin{minted}[breaklines]{rust}
+%     enemies.remove(0)
+%     // enemies = [enemy2, enemy3, enemy4]
+% \end{minted}
 
-However, the size of physical memory, one a garbage collector has to deal with, unlike a vector, cannot be freely removed or changed.
+% However, the size of physical memory, one a garbage collector has to deal with, unlike a vector, cannot be freely removed or changed.
 
-Imagine that the vector storing the enemies must be of a fixed length, and one couldn't push or pop from the array at will. Now how would one manage ``alive'' and ``dread'' enemies?
+% Imagine that the vector storing the enemies must be of a fixed length, and one couldn't push or pop from the array at will. Now how would one manage ``alive'' and ``dread'' enemies?
 
-In this array, one would have to keep track of where the next free space is, in order to write to that free space when an enemy should be allocated.
+% In this array, one would have to keep track of where the next free space is, in order to write to that free space when an enemy should be allocated.
 
-\begin{minted}[breaklines]{rust}
-    // enemies = [enemy1, enemy2, enemy3, NULL]
-    free = 3
-\end{minted}
+% \begin{minted}[breaklines]{rust}
+%     // enemies = [enemy1, enemy2, enemy3, NULL]
+%     free = 3
+% \end{minted}
 
-This simple action of keeping track of the free space, is where all the problems of memory management comes from.
+% This simple action of keeping track of the free space, is where all the problems of memory management comes from.
 
-\subsection{In the context of computers}
+% \subsection{In the context of computers}
 
 The data of all computer programs are stored in a place we call memory.
 
@@ -122,38 +122,6 @@ The \verb+collect()+ function of this mark-compact algorithm can be broken down 
 
 To determine which objects are alive and dead, we attempt to traverse the entire heap through the graph of objects. We start from the root nodes, located on the stack\cites[3..~Marking]{redhat_openjdk}[Chapter~3]{gc_handbook}, adding the objects that they reference to a worklist. Then we do the same for the worklist. Accessible objects are objects that can eventually be reached by this recursion of reference from the roots. We could use either breadth-first, or depth-first traversal to traverse the heap depending on the implementation (our program uses breadth-first), and objects that are then found to be inaccessible (because they are unmarked) are defined as `garbage' and can be ignored in the \verb+compact+ phase.
 
-\begin{minted}[linenos, breaklines]{rust}
-// this block contains the code to mark all reachable objects
-{
-    // first create a worklist, which is going to be a queue, since
-    // we're doing breadth-first traversal
-    let mut worklist: VecDeque<NodePointer> = VecDeque::new();
-
-    // populate the worklist with children reachable from the roots
-    for root in &stack.roots {
-        for child in &root.children {
-            worklist.push_back(*child);
-        }
-    }
-
-    // then we just keep on taking from the worklist until it's empty
-    while let Some(node) = worklist.pop_front() {
-        // if the node isn't marked (already)
-        if !self.is_marked(node) {
-            // we mark it because it means it's accessible
-            self.mark(node);
-            // then add the rest of its children to the back of the queue
-            for child_node_pointer in &self.get(node).unwrap().children {
-                worklist.push_back(*child_node_pointer);
-            }
-        }
-    }
-}
-// now all our reachable objects should be marked, everything that isn't is
-// considered garbo. We only care about the marked objects in our traversals
-// from now on
-\end{minted}
-
 As seen by the implementation above, in order to ``mark'' an object that is accessible, the field used to store the forwarding address used for later calcualtions is mutated, which effectively functions as a mark bit to flag that the object. \cite[Chapter~1]{gc_handbook}
 
 % As for storing whether an object is marked with a starting bit, a rather expensive but easy to implement option is to use a bitmap (an array of bits, basically) where each index corresponds to each object in the heap, which is marked 1 or 0 to show that it is alive (1) or dead (0) \cite[Chapter~3]{gc_handbook}.
@@ -162,28 +130,6 @@ As seen by the implementation above, in order to ``mark'' an object that is acce
 
 The compaction stage of the mark-compact algorithm can be broken down into three parts, and in each part, the heap is traversed in its entirety. The first stage is to calculate the location of where the living object will slide down after copying. We do this by initializing a \verb+free+ pointer starting at the very bottom of the heap, and set the \verb+forwarding_address+ of the living marked object in question to the free pointer, then bumping its size up \cites[Chapter~3]{gc_handbook}[Sections~3.3-3.5]{redhat_openjdk}.
 
-\begin{minted}[linenos, breaklines]{rust}
-// the next three blocks contain the compact code
-// free starts at 0, the beginning of the point which we wish to compact to
-let mut free = 0;
-
-// 1. the first step is to calculate new locations of all objects
-{
-    // we iterate over all objects in the heap
-    for idx in 0..self.free {
-        // if it is marked,
-        if self.is_marked(idx.into()) {
-            // set its forwarding address equal to free
-            self.set_forwarding_address(idx.into(), free.into());
-            // then bump free by the object's size
-            free += 1;
-            if free > self.committed_memory.len() {
-                return Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into());
-            }
-        }
-    }
-}
-\end{minted}
 
 The second stage of garbage collection is to update the references of each marked living object to point to the new \verb+forwarding_address+ of where they'll eventually be moved. We do this by iterating over the heap a 2nd time, only looking at marked objects. Then for each reference of each object, we retrieving the \verb+forwarding_address+ for that referenced object that we calcualted in the previous step and set that as the new reference to the object \cites[Chapter 3]{gc_handbook}[Sec.~3.4]{redhat_openjdk}.
 
@@ -225,6 +171,164 @@ Like the mark-compact garbage collector, on every allocation, it checks if the h
     \caption{What checking for allocations looks like.}
 \end{figure}
 
+In this case, because the heap is split in half, we check that the \verb+free+ is not greater than the end of the heap but rather that it is not greater than half of the size of the heap. Once the heap does end up filling up, we can no longer allocate a new object on the heap and thus must call the \verb+collect()+ function of the stop-and-copy garbage collection algorithm.
+
+\subsubsection{Cheney's Algorithm}
+
+Right as we jump into the collect function, we flip the \verb+from_space+ with \verb+to_space+.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.25]{pics/flipping.png}
+    \caption{flipping}
+\end{figure}
+
+Then we follow that by copying the initial children of the roots reachable by the program into \verb+to_space+. Note that the references that these children newly copied to \verb+to_space+ hold still point to objects in \verb+from_space+
+
+Inside the \verb+copy+ function we use above to move the children of the roots over, we update the \verb+forwarding_address+ of their old location on \verb+from_space+ to point to their new location on \verb+to_space+.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale=0.3]{pics/visualization-of-worklist.png}
+    \caption{The algorithm for stop and compact. During the collect function, objects in from space are copied to to space, and their forwarding addresses are updated to point to the copied objects in to space.}
+\end{figure}
+
+Now, the objects and references of objects in \verb+to_space+ effectively act as a worklist. We repeatedly iterate over the objects in \verb+to_space+, until we reach the end of all the objects in \verb+to_space+. For every object that we then encounter (including the roots that we just moved), we find their references, move them over to \verb+to_space+ if we haven't already, and then update the references to point to \verb+to_space+. (If their references have already been moved, then we can just use their \verb+forwarding_address+ that we updated on the \verb+from_space+ to point to the right location).
+
+Upon reaching the end of the \verb+to_space+, garbage collection is done, because all live objects have been copied to the the effective heap. At this point, the \verb+from_space+ is basically ignored, and the \verb+to_space+ becomes the effective heap, until the next cycle of garbage collection occurs.
+
+
+\section{Experiment}
+
+From the algorithms above, one can infer that for a garbage collector, or more specifically, compacting collectors, there are two areas where pure performance can be measured. This is during the \verb+collect()+ part of the algorithm, when the graph of live objects is being traversed and objects are being moved to their compacted points, as well as the runtime performance of the program, when the objects on the heap are being accessed after garbage collection.
+
+To test and compare these two algorithms, both were implemented as part of a library for the Rust programming language, a low-level programming language with comparable performance to C with its own novel model of memory management. Being implemented in a low-level programming language, the performance of the algorithms would not be subject to performance impacts of that language's garbage collector. \footnote{Snippets source code for the algorithms can be found in the Appendix, as they have been referenced throughout the paper. The full source code can be found at \href{https://github.com/SpicyRicecaker/gc-representation-rs}{https://github.com/SpicyRicecaker/gc-representation-rs}}
+
+To generate the testing data, the custom abstraction of a garbage collected data structure will be used \cite{youtube_introductory_video}. A dead simple binary tree will be filled with a predetermined number of \(1,000,000\) objects. Every node is first pushed to the end of the free space on the vector, and children are added as indices, which are an abstraction of pointers. Each node will have two children until the leaf nodes of the tree are reached.
+
+To measure the collection performance, garbage will be generated in a graph of objects. And to measure the runtime performance, the graph of all objects will be traversed, and the values that each of the objects will be summed up.
+
+
+Then, a seeded random number generator will be used to link \(500,000\) random objects from the first half of the tree to \(500,000\) random objects in the latter half of the tree (via adding their indices as children).
+
+Finally, a number of children will be removed from a range of parents in the tree, which will generate garbage: there will be two sets of data, one with a large number of live objects remaining after the garbage collection, and one with a smaller number of live objects remaining (the number of removed nodes will be shown in the data below).
+
+The testing framework used in this will be the \verb+criterion+ crate in Rust, which automatically runs each function for a set amount of time in the beginning to ``normalize'' the caches, which is especially important \cite{a_unified_theory_of_garbage_collection} for the comparison of garbage collection algorithms, as the way objects are arranged in memory will affect the layout of objects in the cache, which is important to keep consistent. It also determines the number of tests to run and takes the average of all of them, the information of which will be presented in the data below.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pics/collect-perf.pdf}
+    \caption{Graph showing collection performance}
+\end{figure}
+
+Initially, with little garbage in a collection cycle, the collection performance using the LISP 2 algorithm is nearly equivalent to Cheney's algorithm, despite the LISP 2 algorithm having to traverse the heap 3 times in total, 2 times more than Cheney's algorithm. This lack of expected performance on the stop-and-copy's collectors part might be due to the fact that every single live object (that is, \(93.4\%\) of the remaining heap) must be copied into \verb+to_space+, regardless of its current position. Whereas, for the mark-compact algorithm, if objects are already in place, they do not have to be copied again. Intuitively, copying memory around is fairly expensive. In this case, the performance difference is definitely due to this balance of copying versus traversing performance.
+
+Surprisingly though, when the heap is mostly made of garbage, the stop-copy collector begins to perform worse than the mark-compact collector. This partially doesn't make sense, because the way that the mark-compact collector is implemented, it should still be traversing through the entire heap 3 times through all the dead objects, while the stop-copy collector would only have to iterate through the live objects, so further research is needed on this area to confirm if this is due to an implementation detail in the program or if there is a reasonable explanation for this phoenomenon.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pics/traverse-bfs-perf.pdf}
+    \caption{Graph showing runtime performance via bfs traversal}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{pics/traverse-dfs-perf.pdf}
+    \caption{Graph showing runtime via dfs traversal}
+\end{figure}
+\section{Conclusion}
+\subsection{Areas of Error}
+
+The graphs describing the runtime performance of the two algorithms show that when there is only a small amount of garbage in a collection cycle, the runtime performance remains practically unchanged. This makes sense for the mark-compact algorithm, because the order of objects is maintained after a compaction, but also for Cheney's algorithm, because, despite the fact that the algorithm does not gurantee that the order of objects be maintained, because of the small number of deletions, as data was inserted in the form of a binary tree where each child node was allocated bread-first into the node, the way the stop-copy algorithm copies the objects mimics that insertion and thus the speed is mostly maintained.
+
+However, after a garbage collection cycle removes most of the garbage, the data shows that there becomes a huge performance gap between the mark-compact and stop-copy collector, with the mark-compact compacted objects being traversed almost an order of magnitude faster.
+
+This is most likely due to the fact that after a compaction, the order of nodes becomes jumbled with the stop-copy collector, however,
+
+Though, it should be noted that the data structure used to represent the objects, the way the objects were linked, and the values that the objects held are all very specific things that could lead to a couple biases for one algorithm or another based off these things alone.
+
+A tree with links here and there is one type of data structure.
+
+Another shortcoming is that heaps are acted on for a long period of time. Especially for the stop-and-copy algorithm: in the first iteration it's runtime performance was almost just as good as mark-compact and it had a \verb+collect()+ speed that was twice as fast.
+
+Another thing was the fact that the "marking bitmap" the mark-compact algorithm algorithm used required regeneration everytime garbage needed to be collected. No universal implementation of the marking bitmap was found for the LISP-2 style mark compact algorithm. The specific implmentation in this paper chose to use the builtin langauge quicksort 3 algorithm to order the indices after marking. This could've introduced a confounding variable, since if sorting algorithms were used with a higher time complexity the stop-and-copy algorithm would've been observed to be faster.
+
+\subsubsection{Side note on page}
+
+In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware \cite{code_project}. These are stored in tables, and there is a \verb+page+ storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
+
+However, despite the fact that Cheney's stop-and-copy algorithm has much fewer steps than the mark-compact garbage collector, it has several downsides. Apart from the most obvious thing being the heap split in half, it's important to note that the way the worklist is traversed in this algorithm, it's effectively breadth-first by reference. Therefore, when objects are moved, their original order is not preserved, unlike with the mark-compact garbage collector. This could negatively affect program performance, because parents have the possibility of being separated from their children, resulting in large differences in locality despite the heap being compacted.
+
+It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large surviving objects multiple times will inevitably lead to poor performance \cite[Chapter~4]{gc_handbook}.
+
+Stop-and-copy garbage collection actually moves more than mark-compact garbage collection, because there isn't the possibility of objects staying in place and already being compacted. But on the flipside, instead of having to traverse the heap 3 times to achieve heap compaction, the heap is effectively only traversed one time in one fell swoop.
+
+And while mark-and-copy garbage collection is using double the memory that mark-compact is, it is still very elegant how a worklist or queue is not needed to  get through marking, and neither is a marking bitmap. By traversing the heap 3 times less, one might infer that for large heaps, the semi-space algorithm would outperform the mark-compact garbage collector algorithm.
+
+% What is the mutator again?
+% Revise images
+% What is the l2 cache?
+% ~50 mb cache on the CPU responsible for quickly accessing data, is orders of magnitude faster than RAM or harddrive?
+% When does it get proced when...
+% Bugs: https://github.com/SpicyRicecaker/gc-representation-rs
+
+\appendix
+\section{Marking Stage}
+\begin{minted}[linenos, breaklines]{rust}
+// this block contains the code to mark all reachable objects
+{
+    // first create a worklist, which is going to be a queue, since
+    // we're doing breadth-first traversal
+    let mut worklist: VecDeque<NodePointer> = VecDeque::new();
+
+    // populate the worklist with children reachable from the roots
+    for root in &stack.roots {
+        for child in &root.children {
+            worklist.push_back(*child);
+        }
+    }
+
+    // then we just keep on taking from the worklist until it's empty
+    while let Some(node) = worklist.pop_front() {
+        // if the node isn't marked (already)
+        if !self.is_marked(node) {
+            // we mark it because it means it's accessible
+            self.mark(node);
+            // then add the rest of its children to the back of the queue
+            for child_node_pointer in &self.get(node).unwrap().children {
+                worklist.push_back(*child_node_pointer);
+            }
+        }
+    }
+}
+// now all our reachable objects should be marked, everything that isn't is
+// considered garbo. We only care about the marked objects in our traversals
+// from now on
+\end{minted}
+\section{Calculate Forwarding}
+\begin{minted}[linenos, breaklines]{rust}
+// the next three blocks contain the compact code
+// free starts at 0, the beginning of the point which we wish to compact to
+let mut free = 0;
+
+// 1. the first step is to calculate new locations of all objects
+{
+    // we iterate over all objects in the heap
+    for idx in 0..self.free {
+        // if it is marked,
+        if self.is_marked(idx.into()) {
+            // set its forwarding address equal to free
+            self.set_forwarding_address(idx.into(), free.into());
+            // then bump free by the object's size
+            free += 1;
+            if free > self.committed_memory.len() {
+                return Err("not enough space on heap to allocate new object. Something went wrong with marking objects in `collect()`".into());
+            }
+        }
+    }
+}
+\end{minted}
+\section{Cheney Allocations}
 \begin{minted}[linenos, breaklines]{rust}
 // allocates a new node to the heap
 fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
@@ -248,13 +352,7 @@ fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
     Ok(node_pointer)
 }
 \end{minted}
-
-In this case, because the heap is split in half, we check that the \verb+free+ is not greater than the end of the heap but rather that it is not greater than half of the size of the heap. Once the heap does end up filling up, we can no longer allocate a new object on the heap and thus must call the \verb+collect()+ function of the stop-and-copy garbage collection algorithm.
-
-\subsubsection{Cheney's Algorithm}
-
-Right as we jump into the collect function, we flip the \verb+from_space+ with \verb+to_space+.
-
+\section{Cheney Swap}
 \begin{minted}[linenos, breaklines]{rust}
     // first we swap from space with tospace
 {
@@ -265,15 +363,7 @@ Right as we jump into the collect function, we flip the \verb+from_space+ with \
     self.top = self.to_space + self.extent;
 }
 \end{minted}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[scale=0.25]{pics/flipping.png}
-    \caption{flipping}
-\end{figure}
-
-Then we follow that by copying the initial children of the roots reachable by the program into \verb+to_space+. Note that the references that these children newly copied to \verb+to_space+ hold still point to objects in \verb+from_space+
-
+\section{Cheney's Initial Population Function}
 \begin{minted}[linenos, breaklines]{rust}
 // next we populate the initial "working list" with roots
 {
@@ -287,9 +377,7 @@ Then we follow that by copying the initial children of the roots reachable by th
     }
 }
 \end{minted}
-
-Inside the \verb+copy+ function we use above to move the children of the roots over, we update the \verb+forwarding_address+ of their old location on \verb+from_space+ to point to their new location on \verb+to_space+.
-
+\section{Copy Function}
 \begin{minted}[linenos, breaklines]{rust}
 /// copy function
 pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
@@ -328,15 +416,7 @@ pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
     }
 }
 \end{minted}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[scale=0.3]{pics/visualization-of-worklist.png}
-    \caption{The algorithm for stop and compact. During the collect function, objects in from space are copied to to space, and their forwarding addresses are updated to point to the copied objects in to space.}
-\end{figure}
-
-Now, the objects and references of objects in \verb+to_space+ effectively act as a worklist. We repeatedly iterate over the objects in \verb+to_space+, until we reach the end of all the objects in \verb+to_space+. For every object that we then encounter (including the roots that we just moved), we find their references, move them over to \verb+to_space+ if we haven't already, and then update the references to point to \verb+to_space+. (If their references have already been moved, then we can just use their \verb+forwarding_address+ that we updated on the \verb+from_space+ to point to the right location).
-
+\section{Copy Remaining}
 \begin{minted}[linenos, breaklines]{rust}
     // now we process all the references of the nodes in the worklist as well
     {
@@ -364,83 +444,7 @@ Now, the objects and references of objects in \verb+to_space+ effectively act as
 }
 \end{minted}
 
-Upon reaching the end of the \verb+to_space+, garbage collection is done, because all live objects have been copied to the the effective heap. At this point, the \verb+from_space+ is basically ignored, and the \verb+to_space+ becomes the effective heap, until the next cycle of garbage collection occurs.
-
-
-\section{Experiment}
-
-From the algorithms above, one can infer that for a garbage collector, there are two areas where pure performance can be measured. This is during the \verb+collect()+ part of the algorithm, when the graph of live objects is being traversed and objects are being moved to their compacted points, as well as the runtime performance of the program, when the objects on the heap are being accessed.
-
-To measure the collection performance, garbage will be generated in a graph of objects. And to measure the runtime performance, the graph of all objects will be traversed, and the values that each of the objects will be summed up.
-
-To generate the testing data, the custom abstraction of a garbage collected data structure will be used \cite{youtube_introductory_video}. A dead simple binary tree will be filled with a predetermined number of \(1,000,000\) objects. Every node is first pushed to the end of the free space on the vector, and children are added as indices, which are an abstraction of pointers. Each node will have two children until the leaf nodes of the tree are reached.
-
-Then, a seeded random number generator will be used to link \(500,000\) random objects from the first half of the tree to \(500,000\) random objects in the latter half of the tree (via adding their indices as children).
-
-Finally, a number of children will be removed from a range of parents in the tree, which will generate garbage: there will be two sets of data, one with a large number of live objects remaining after the garbage collection, and one with a smaller number of live objects remaining (the number of removed nodes will be shown in the data below).
-
-The testing framework used in this will be the \verb+criterion+ crate in Rust, which automatically runs each function for a set amount of time in the beginning to ``normalize'' the caches, which is especially important \cite{a_unified_theory_of_garbage_collection} for the comparison of garbage collection algorithms, as the way objects are arranged in memory will affect the layout of objects in the cache, which is important to keep consistent. It also determines the number of tests to run and takes the average of all of them, the information of which will be presented in the data below.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{pics/collect-perf.pdf}
-    \caption{Graph showing collection performance}
-\end{figure}
-
-Initially, with little garbage in a collection cycle, the collection performance using the LISP 2 algorithm is nearly equivalent to Cheney's algorithm, despite the LISP 2 algorithm having to traverse the heap 3 times in total, 2 times more than Cheney's algorithm. This lack of expected performance on the stop-and-copy's collectors part might be due to the fact that every single live object (that is, \(93.4\%\) of the remaining heap) must be copied into \verb+to_space+, regardless of its current position. Whereas, for the mark-compact algorithm, if objects are already in place, they do not have to be copied again. Intuitively, copying memory around is fairly expensive. In this case, the performance difference is definitely due to this balance of copying versus traversing performance. 
-
-Surprisingly though, when the heap is mostly made of garbage, the stop-copy collector begins to perform worse than the mark-compact collector. This partially doesn't make sense, because the way that the mark-compact collector is implemented, it should still be traversing through the entire heap 3 times through all the dead objects, while the stop-copy collector would only have to iterate through the live objects, so further research is needed on this area to confirm if this is due to an implementation detail in the program or if there is a reasonable explanation for this phoenomenon.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{pics/traverse-bfs-perf.pdf}
-    \caption{Graph showing runtime performance via bfs traversal}
-\end{figure}
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.9\textwidth]{pics/traverse-dfs-perf.pdf}
-    \caption{Graph showing runtime via dfs traversal}
-\end{figure}
-\section{Conclusion}
-\subsection{Areas of Error}
-
-The graphs describing the runtime performance of the two algorithms show that when there is only a small amount of garbage in a collection cycle, the runtime performance remains practically unchanged. This makes sense for the mark-compact algorithm, because the order of objects is maintained after a compaction, but also for Cheney's algorithm, because, despite the fact that the algorithm does not gurantee that the order of objects be maintained, because of the small number of deletions, as data was inserted in the form of a binary tree where each child node was allocated bread-first into the node, the way the stop-copy algorithm copies the objects mimics that insertion and thus the speed is mostly maintained. 
-
-However, after a garbage collection cycle removes most of the garbage, the data shows that there becomes a huge performance gap between the mark-compact and stop-copy collector, with the mark-compact compacted objects being traversed almost an order of magnitude faster. 
-
-This is most likely due to the fact that after a compaction, the order of nodes becomes jumbled with the stop-copy collector, however, 
-
-
-Though, it should be noted that the data structure used to represent the objects, the way the objects were linked, and the values that the objects held are all very specific things that could lead to a couple biases for one algorithm or another based off these things alone.
-
-A tree with links here and there is one type of data structure.
-
-Another shortcoming is that heaps are acted on for a long period of time. Especially for the stop-and-copy algorithm: in the first iteration it's runtime performance was almost just as good as mark-compact and it had a \verb+collect()+ speed that was twice as fast.
-
-Another thing was the fact that the "marking bitmap" the mark-compact algorithm algorithm used required regeneration everytime garbage needed to be collected. No universal implementation of the marking bitmap was found for the LISP-2 style mark compact algorithm. The specific implmentation in this paper chose to use the builtin langauge quicksort 3 algorithm to order the indices after marking. This could've introduced a confounding variable, since if sorting algorithms were used with a higher time complexity the stop-and-copy algorithm would've been observed to be faster.
-
-\subsubsection{Side note on page}
-
-In most modern computers, including Windows and Linux, memory in a program is virtual memory, and each range of virtual memory maps to a range of physical memory addresses on hardware \cite{code_project}. These are stored in tables, and there is a \verb+page+ storage allocated for each address in order to link these virtual addresses to physical addresses. However, looking up these values is actually fairly expensive in terms of performance, so physical hardware has a lookup cache, with around the last 500 pages stored in it. Therefore, when objects are closer together in memory or when the order is maintained, it might provide a locality bonus, therefore increasing performance. However, it is still important to note that this implementation still traverses the heap itself 3 times in order to compact objects, which would be a fairly expensive thing to do on large heaps.
-
-However, despite the fact that Cheney's stop-and-copy algorithm has much fewer steps than the mark-compact garbage collector, it has several downsides. Apart from the most obvious thing being the heap split in half, it's important to note that the way the worklist is traversed in this algorithm, it's effectively breadth-first by reference. Therefore, when objects are moved, their original order is not preserved, unlike with the mark-compact garbage collector. This could negatively affect program performance, because parents have the possibility of being separated from their children, resulting in large differences in locality despite the heap being compacted.
-
-It should be noted that mark-and-compact and stop-and-copy garbage collectors are also both moving garbage collectors, meaning that memory is swapped and copied around throughout the garbage collection cycle. Moving large surviving objects multiple times will inevitably lead to poor performance \cite[Chapter~4]{gc_handbook}.
-
-Stop-and-copy garbage collection actually moves more than mark-compact garbage collection, because there isn't the possibility of objects staying in place and already being compacted. But on the flipside, instead of having to traverse the heap 3 times to achieve heap compaction, the heap is effectively only traversed one time in one fell swoop.
-
-And while mark-and-copy garbage collection is using double the memory that mark-compact is, it is still very elegant how a worklist or queue is not needed to  get through marking, and neither is a marking bitmap. By traversing the heap 3 times less, one might infer that for large heaps, the semi-space algorithm would outperform the mark-compact garbage collector algorithm.
-
-% What is the mutator again?
-% Revise images
-% What is the l2 cache?
-% ~50 mb cache on the CPU responsible for quickly accessing data, is orders of magnitude faster than RAM or harddrive?
-% When does it get proced when...
-% Bugs: https://github.com/SpicyRicecaker/gc-representation-rs
-
-\section{Works Cited}
-
+\section*{Works Cited}
 \printbibliography
 
 \end{document}
