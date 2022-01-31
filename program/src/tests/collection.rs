@@ -13,7 +13,6 @@ use std::time::Instant;
 fn random_garbage_collection<T: MemoryManager>(
     stack: &mut Stack,
     heap: &mut T,
-    heap_size: usize,
 ) -> Result<()> {
     init_log();
 
@@ -21,13 +20,13 @@ fn random_garbage_collection<T: MemoryManager>(
 
     {
         let child_node_pointer = seed_root(stack, heap).unwrap();
-        recursively_add_children(child_node_pointer, heap_size - 1, stack, heap).unwrap();
+        recursively_add_children(child_node_pointer, heap.heap_size() - 1, stack, heap).unwrap();
         log::debug!(
             "this is the size of the filled heap: {}/{}",
             heap.free(),
-            heap_size
+            heap.heap_size()
         );
-        assert_eq!(heap.free(), heap_size);
+        assert_eq!(heap.free(), heap.heap_size());
     }
 
     log::info!("time it took to fill stuff up: {:#?}", instant.elapsed());
@@ -36,11 +35,11 @@ fn random_garbage_collection<T: MemoryManager>(
     // create number of links equal to number of nodes, randomly from anywhere to anywhere
     let mut rng = Pcg64::seed_from_u64(1234);
     {
-        for _ in 0..heap_size {
+        for _ in 0..heap.heap_size() {
             // generate two random numbers
             let (first, second) = (
-                rng.gen_range(0..heap_size),
-                rng.gen_range(heap_size / 2..heap_size),
+                rng.gen_range(0..heap.heap_size()),
+                rng.gen_range(heap.heap_size() / 2..heap.heap_size()),
             );
             // link child before point of removal to parent
             heap.get_mut(NodePointer::from(first))
@@ -54,7 +53,7 @@ fn random_garbage_collection<T: MemoryManager>(
     instant = Instant::now();
     // randomly remove links half the population of the latter half
     {
-        for _ in heap_size / 2..heap_size {
+        for _ in heap.heap_size() / 2..heap.heap_size() {
             // generate two random numbers
             let num = rng.gen_range(100..10_000);
             // link child before point of removal to parent
@@ -69,7 +68,7 @@ fn random_garbage_collection<T: MemoryManager>(
     log::info!(
         "this is the size of the cleaned up heap: {}/{}",
         heap.free(),
-        heap_size
+        heap.heap_size()
     );
     log::info!("CRITICAL time it took to collect: {:#?}", instant.elapsed());
 
@@ -94,7 +93,7 @@ fn mark_compact_random() {
     // initializing the heap
     let mut heap = MarkCompactHeap::init(heap_size);
 
-    random_garbage_collection(&mut stack, &mut heap, heap_size).unwrap();
+    random_garbage_collection(&mut stack, &mut heap).unwrap();
 }
 
 #[test]
@@ -106,7 +105,7 @@ fn stop_and_copy_random() {
     // initializing the heap
     let mut heap = StopAndCopyHeap::init(heap_size);
 
-    random_garbage_collection(&mut stack, &mut heap, heap_size / 2).unwrap();
+    random_garbage_collection(&mut stack, &mut heap).unwrap();
 }
 
 fn sum_garbage_collection<T: MemoryManager>(

@@ -86,55 +86,55 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
     })
     .collect();
 
-    let mut group = c.benchmark_group("Collection Performance");
+    // let mut group = c.benchmark_group("Collection Performance");
 
-    for (size, ratio) in input_data.iter() {
-        for memory_type in &memory_types {
-            match memory_type {
-                MemoryType::MarkCompact(m) => {
-                    group.bench_with_input(
-                        BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
-                        ratio,
-                        |b, _ratio| {
-                            b.iter_batched(
-                                || {
-                                    let mut stack = m.stack.clone();
-                                    let mut heap = m.heap.clone();
+    // for (size, ratio) in input_data.iter() {
+    //     for memory_type in &memory_types {
+    //         match memory_type {
+    //             MemoryType::MarkCompact(m) => {
+    //                 group.bench_with_input(
+    //                     BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
+    //                     ratio,
+    //                     |b, _ratio| {
+    //                         b.iter_batched(
+    //                             || {
+    //                                 let mut stack = m.stack.clone();
+    //                                 let mut heap = m.heap.clone();
 
-                                    make_garbage(&mut stack, &mut heap, *size).unwrap();
+    //                                 make_garbage(&mut stack, &mut heap, *size).unwrap();
 
-                                    (stack, heap)
-                                },
-                                |(mut stack, mut heap)| collect(&mut stack, &mut heap),
-                                criterion::BatchSize::SmallInput,
-                            )
-                        },
-                    );
-                }
-                MemoryType::StopAndCopy(m) => {
-                    group.bench_with_input(
-                        BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
-                        ratio,
-                        |b, _ratio| {
-                            b.iter_batched(
-                                || {
-                                    let mut stack = m.stack.clone();
-                                    let mut heap = m.heap.clone();
+    //                                 (stack, heap)
+    //                             },
+    //                             |(mut stack, mut heap)| collect(&mut stack, &mut heap),
+    //                             criterion::BatchSize::SmallInput,
+    //                         )
+    //                     },
+    //                 );
+    //             }
+    //             MemoryType::StopAndCopy(m) => {
+    //                 group.bench_with_input(
+    //                     BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
+    //                     ratio,
+    //                     |b, _ratio| {
+    //                         b.iter_batched(
+    //                             || {
+    //                                 let mut stack = m.stack.clone();
+    //                                 let mut heap = m.heap.clone();
 
-                                    make_garbage(&mut stack, &mut heap, *size).unwrap();
+    //                                 make_garbage(&mut stack, &mut heap, *size).unwrap();
 
-                                    (stack, heap)
-                                },
-                                |(mut stack, mut heap)| collect(&mut stack, &mut heap),
-                                criterion::BatchSize::SmallInput,
-                            )
-                        },
-                    );
-                }
-            }
-        }
-    }
-    group.finish();
+    //                                 (stack, heap)
+    //                             },
+    //                             |(mut stack, mut heap)| collect(&mut stack, &mut heap),
+    //                             criterion::BatchSize::SmallInput,
+    //                         )
+    //                     },
+    //                 );
+    //             }
+    //         }
+    //     }
+    // }
+    // group.finish();
 
     let mut group = c.benchmark_group("Runtime Performance: Breadth-First Search");
 
@@ -146,6 +146,7 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
                     let mut heap = m.heap.clone();
 
                     make_garbage(&mut stack, &mut heap, *size).unwrap();
+                    collect(&mut stack, &mut heap);
 
                     group.bench_with_input(
                         BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
@@ -158,6 +159,7 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
                     let mut heap = m.heap.clone();
 
                     make_garbage(&mut stack, &mut heap, *size).unwrap();
+                    collect(&mut stack, &mut heap);
 
                     group.bench_with_input(
                         BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
@@ -180,6 +182,7 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
                     let mut heap = m.heap.clone();
 
                     make_garbage(&mut stack, &mut heap, *size).unwrap();
+                    collect(&mut stack, &mut heap);
 
                     group.bench_with_input(
                         BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
@@ -192,6 +195,7 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
                     let mut heap = m.heap.clone();
 
                     make_garbage(&mut stack, &mut heap, *size).unwrap();
+                    collect(&mut stack, &mut heap);
 
                     group.bench_with_input(
                         BenchmarkId::new(m.label.as_ref().unwrap(), ratio),
@@ -203,41 +207,6 @@ fn random_benchmark(c: &mut Criterion, memory_types: Vec<MemoryType>) {
         }
     }
     group.finish();
-
-    // c.bench_function(&format!("{} collection", label), |b| {
-    //     b.iter_batched(
-    //         || (stack.clone(), heap.clone()),
-    //         |(mut stack, mut heap)| collect(&mut stack, &mut heap),
-    //         criterion::BatchSize::SmallInput,
-    //     )
-    // });
-    // c.bench_function(&format!("{} traverse (breadth first)", label), |b| {
-    //     b.iter(|| stack.sum_bfs(&heap))
-    // });
-    // c.bench_function(&format!("{} traverse (breadth first)", label), |b| {
-    //     b.iter(|| stack.sum_dfs(&heap))
-    // });
-
-    // // reset the heap into a boring heap
-    // stack.roots[0].children.pop();
-    // collect(&mut stack, &mut heap);
-    // get_heap_boring(&mut stack, &mut heap, heap_size).unwrap();
-
-    // c.bench_function(&format!("{} full collection", label), |b| {
-    //     b.iter_batched(
-    //         || (stack.clone(), heap.clone()),
-    //         |(mut stack, mut heap)| collect(&mut stack, &mut heap),
-    //         criterion::BatchSize::SmallInput,
-    //     )
-    // });
-
-    // c.bench_function(&format!("{} traverse (depth first)", label), |b| {
-    //     b.iter(|| stack.sum_bfs(&heap))
-    // });
-
-    // c.bench_function(&format!("{} traverse (breadth first)", label), |b| {
-    //     b.iter(|| stack.sum_dfs(&heap))
-    // });
 }
 
 criterion_group!(benches, random_benchmark_init);

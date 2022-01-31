@@ -34,7 +34,7 @@ fn bfs_dfs() -> Result<()> {
         // initializing the stack
         let mut stack = Stack::new(STACK_SIZE);
         // initializing the heap
-        let mut heap = MarkCompactHeap::init(heap_size);
+        let mut heap = StopAndCopyHeap::init(heap_size);
 
         // now initialize the heap one way
         link_heap(&mut stack, &mut heap).unwrap();

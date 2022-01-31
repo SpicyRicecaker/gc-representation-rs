@@ -103,6 +103,7 @@ impl MemoryManager for MarkCompactHeap {
         // the next three blocks contain the compact code
         // free starts at 0, the beginning of the point which we wish to compact to
         let mut free = 0;
+
         // 1. the first step is to calculate new locations of all objects
         {
             // we iterate over all objects in the heap

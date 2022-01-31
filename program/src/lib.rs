@@ -127,7 +127,7 @@ pub fn make_garbage<T: MemoryManager + Clone>(
 
     let layers = (1. + heap.heap_size() as f32).log2().floor() as u32;
 
-    let low = layers - 7;
+    let low = layers - 9;
     let high = layers - 5;
 
     let lowest_layer = 2_usize.pow(low);
