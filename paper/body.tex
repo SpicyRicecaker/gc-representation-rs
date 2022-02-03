@@ -146,7 +146,7 @@ Inside the \verb+copy+ function, we move the children of the roots over (if they
     \caption{The algorithm for stop and compact. During the collect function, objects in from space are copied to to space, and their forwarding addresses are updated to point to the copied objects in to space.}
 \end{figure}
 
-Now, the objects and references of objects in \verb+to_space+ effectively act as a worklist. . For every remaining object in \verb+to_space+ (including the roots that we just moved), we take the objects they reference, move them over to \verb+to_space+ if we haven't already, and then update the references to point to \verb+to_space+. (If their references have already been moved, then we can just use their \verb+forwarding_address+ that we updated on the \verb+from_space+ to point to the right location)\footnote{See Appendix G for code that copies remaining objects}.
+Now, the objects and references of objects in \verb+to_space+ effectively act as a worklist. For every remaining object in \verb+to_space+ (including the roots that we just moved), we take the objects they reference, move them over to \verb+to_space+ if we haven't already, and then update the references to point to \verb+to_space+. (If their references have already been moved, then we can just use their \verb+forwarding_address+ that we updated on the \verb+from_space+ to point to the right location)\footnote{See Appendix G for code that copies remaining objects}.
 
 It should be noted that because the objects in \verb+to_space+ act as a worklist, stop-copy is inevitably breadth-first. This is opposed to mark-compact, which gives us the freedom to choose between using a stack and queue (and therefore between breadth-first or depth-first) in the marking stage, and preserves insertion order in the move stage.
 
@@ -173,36 +173,36 @@ Finally, to measure the collection performance, for each heap of the two algorit
 To measure the runtime performance, the value of all nodes in the graph will be summed up. We do this by traversing the heap from the roots. There will be two traversals: one using breadth-first search and one using depth-first search. The time taken to complete these traversals will be recorded.
 
 The testing framework used in this experiment will be the \verb+criterion+ crate. This crate automatically runs each function for a set amount of time in the beginning to prep the cache\cite{brookheislerAnalysisProcessCriterion}, which is especially relevant for garbage collection, as the way objects are arranged in memory will be different after garbage collection is run, which would affect the layout of objects in the cache. It also runs each test multiple times to reach a target runtime length, which increases the certainty in the average value that it returns for the time it took to complete the function\cite{brookheislerAnalysisProcessCriterion}.
-The benchmarks were performed on a system with the following specs:
-
-\begin{table}[H]
-    % the @{} removes minimal padding 
-    % llr stands for left and right centering
-    \begin{tabular}{@{}cc@{}} \toprule
-        Operating System: & MacOs Montery 12.2 \\
-        CPU               & Apple M1 Chip      \\
-        RAM               & 8 Gb
-        \bottomrule
-    \end{tabular}
-\end{table}
-
 
 \subsection{Data}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{pics/collect.pdf}
+    \includegraphics[width=0.91\textwidth]{pics/collect.pdf}
     \caption{Collection performance: Time Taken to Collect garbage with Various Garbage Amounts, where the \(x\)-axis demonstrates the ratio of dead to live objects in the heap before removal.}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{pics/bfs.pdf}
+    \includegraphics[width=0.91\textwidth]{pics/bfs.pdf}
     \caption{Runtime Performance: Time Taken to Traverse Data Via BFS after removing Garbage, where the \(x\)-axis demonstrates the ratio of dead to live objects in the heap before removal.}
 \end{figure}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{pics/dfs.pdf}
+    \includegraphics[width=0.91\textwidth]{pics/dfs.pdf}
     \caption{Runtime Performance: Time Taken to Traverse Data Via DFS after removing Garbage, where the \(x\)-axis demonstrates the ratio of dead to live objects in the heap before removal.}
 \end{figure}
+
+\begin{table}
+    % the @{} removes minimal padding 
+    % llr stands for left and right centering
+    \centering
+    \begin{tabular}{@{}ll@{}} \toprule
+        Operating System & MacOs Montery 12.2 \\
+        CPU               & Apple M1 Chip      \\
+        RAM               & 8 Gb\\
+        \bottomrule
+    \end{tabular}
+    \caption{Specs of the system used to benchmark the data}
+\end{table}
 
 \subsection{Observations and Analysis}
 
