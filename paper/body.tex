@@ -2,14 +2,38 @@
 \documentclass[index]{subfiles}
 
 \begin{document}
-\title{Investigating the efficiency of Cheney stop-and-copy and LISP-2 style mark-compact garbage collection algorithms}
-\date{}
-\author{}
-\maketitle
+\doublespacing{}
+\begin{titlepage}
+   \begin{center}
+       \vspace*{1cm}
 
-\section{Research Question}
+       {\huge{Investigating the efficiency of Cheney stop-and-copy and LISP-2 mark-compact garbage collection algorithms}}
 
-How does the runtime and collection performance of Cheney's stop-and-copy algorithm compare to the LISP-2 mark-compact algorithm?
+       \vspace{1.5cm}
+
+       How does the runtime and collection performance of Cheney's stop-and-copy algorithm compare to the LISP-2 mark-compact algorithm?
+            
+       \vspace{1.5cm}
+
+       \vfill
+            
+       International Baccalaureate Extended Essay\\
+       jkv635\\
+
+       \vspace{0.8cm}
+     
+       Computer science\\
+       \vspace{0.8cm}
+       Word Count: 4000\\
+            
+   \end{center}
+\end{titlepage}
+
+\addtocontents{toc}{\protect\thispagestyle{empty}}
+\tableofcontents
+\thispagestyle{empty}
+\newpage
+\setcounter{page}{1}
 
 \section{Introduction}
 
@@ -250,10 +274,16 @@ Another consideration is that both the mark compact collector and stop and copy 
 
 In conclusion, the performance difference between Cheney's stop-and-sopy collector and the LISP-2 Sliding mark-compact is dependent on the situation. If data is accessed or oriented in such a way that it uses breadth-first traversal, then Cheney's rearranging, which causes better locality of reference and only one-time traversal of the heap to make it an easy choice over the mark-compact collector. However, when data isn't oriented correctly, the runtime performance difference between Cheney's algorithm and the LISP-2 collector becomes almost negligible. Cheney's also uses double the amount of memory to operate on the same heap compared to the mark-compact algorithm, meaning that for environments with limited memory, the mark-compact's low memory usage may be a better deal than having faster collections.
 
-\section{Appendix}
+\newpage
 
+\raggedright{}
+\printbibliography[heading=bibintoc, title={Works Cited}]
+
+\section{Appendix}
 \appendix
-\section{Marking Stage}
+\renewcommand{\thesubsection}{\Alph{subsection}}
+
+\subsection{Marking Stage}
 \begin{minted}[linenos, breaklines]{rust}
 // this block contains the code to mark all reachable objects
 {
@@ -285,7 +315,7 @@ In conclusion, the performance difference between Cheney's stop-and-sopy collect
 // considered garbo. We only care about the marked objects in our traversals
 // from now on
 \end{minted}
-\section{Calculate Forwarding}
+\subsection{Calculate Forwarding}
 \begin{minted}[linenos, breaklines]{rust}
 // the next three blocks contain the compact code
 // free starts at 0, the beginning of the point which we wish to compact to
@@ -308,7 +338,7 @@ let mut free = 0;
     }
 }
 \end{minted}
-\section{Update References}
+\subsection{Update References}
 \begin{minted}[linenos, breaklines]{rust}
 // 2. the next step is to update object references
 {
@@ -336,7 +366,7 @@ let mut free = 0;
     }
 }
 \end{minted}
-\section{Move Objects}
+\subsection{Move Objects}
 \begin{minted}[linenos, breaklines]{rust}
 // 3. actually move the objects
 {
@@ -366,7 +396,7 @@ let mut free = 0;
 self.free = free;
 \end{minted}
 
-\section{Cheney Allocations}
+\subsection{Cheney Allocations}
 \begin{minted}[linenos, breaklines]{rust}
 // allocates a new node to the heap
 fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
@@ -390,7 +420,7 @@ fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
     Ok(node_pointer)
 }
 \end{minted}
-\section{Cheney Swap}
+\subsection{Cheney Swap}
 \begin{minted}[linenos, breaklines]{rust}
     // first we swap from space with tospace
 {
@@ -401,7 +431,7 @@ fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
     self.top = self.to_space + self.extent;
 }
 \end{minted}
-\section{Cheney's Initial Population Function}
+\subsection{Cheney's Initial Population Function}
 \begin{minted}[linenos, breaklines]{rust}
 // next we populate the initial "working list" with roots
 {
@@ -415,7 +445,7 @@ fn alloc(&mut self, node: Node, stack: &mut Stack) -> Result<NodePointer> {
     }
 }
 \end{minted}
-\section{Copy Function}
+\subsection{Copy Function}
 \begin{minted}[linenos, breaklines]{rust}
 /// copy function
 pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
@@ -454,7 +484,7 @@ pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
     }
 }
 \end{minted}
-\section{Copy Remaining}
+\subsection{Copy Remaining}
 \begin{minted}[linenos, breaklines]{rust}
     // now we process all the references of the nodes in the worklist as well
     {
@@ -482,9 +512,5 @@ pub fn copy(&mut self, node_pointer: NodePointer) -> Result<NodePointer> {
 }
 \end{minted}
 
-\section*{Works Cited}
-
-\raggedright{}
-\printbibliography{}
 
 \end{document}
